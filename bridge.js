@@ -209,7 +209,7 @@
     canvas.style.display = 'block'; $('previewCanvas').style.display = 'none';
     r = new rive.Rive({
       buffer, canvas,
-      stateMachines: $('smName').value.trim() || 'State Machine 1',
+      stateMachines: $('smName').value.trim() || 'Tournee',
       autoplay: true, autoBind: true,
       enableGPUCanvas: OPT.gpu, useOffscreenRenderer: false,
       assetLoader: (asset, bytes) => {
@@ -222,6 +222,13 @@
       layout: new rive.Layout({ fit: rive.Fit.Contain, alignment: rive.Alignment.Center }),
       onLoad: () => {
         r.resizeDrawingSurfaceToCanvas();
+        const wanted = $('smName').value.trim() || 'Tournee';
+        const names = r.stateMachineNames || [];
+        if (names.length && !names.includes(wanted)){
+          log(`State Machine « ${wanted} » introuvable, je prends « ${names[0]} »`);
+          $('smName').value = names[0];
+          return loadRiv(buffer, label);
+        }
         vmi = r.viewModelInstance;
         bindContract(label);
         log(`options : GPU Canvas ${OPT.gpu ? 'activé' : 'COUPÉ'}, envoi des valeurs ${OPT.push ? (OPT.only ? 'seulement ' + OPT.only.join(', ') : 'activé') : 'COUPÉ'}`);
