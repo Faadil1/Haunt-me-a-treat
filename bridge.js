@@ -69,7 +69,9 @@
     const t = {
       faceJaw: n.jaw, faceSmile: n.smile, faceBrowDown: n.browDown, faceBrowUp: n.browUp,
       faceBlinkL: n.blinkL, faceBlinkR: n.blinkR,
-      faceScary: clamp(n.browDown * 0.45 + n.jaw * 0.35 + n.sneer * 0.4 + n.stretch * 0.2),
+      // « BOUH ! » : la bouche grande ouverte porte l'essentiel, une grimace (sourcils froncés,
+      // nez plissé ou bouche étirée) fait monter jusqu'à 1. Avant : un cri seul plafonnait à 0,35.
+      faceScary: clamp(n.jaw * 0.75 + Math.max(n.browDown, n.sneer, n.stretch) * 0.45),
       faceLookX: geo.lookX, faceLookY: geo.lookY, faceHeadX: geo.headX, faceHeadY: geo.headY, faceRoll: geo.roll,
     };
     for (const k in t){
