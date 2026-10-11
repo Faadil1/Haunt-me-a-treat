@@ -24,6 +24,12 @@ Règles :
   (View Model, liaisons, State Machine, états, transitions, conditions). L'utilisateur fait le rig du tissu,
   le timing et le polish des animations. Ne crée pas d'animations « finales » à sa place : crée des
   animations de placeholder clairement nommées `TODO_...` quand une transition en a besoin.
+- **Unités des liaisons (vérifié en test réel)** : une liaison d'échelle attend un **facteur** (1.0 = 100 %,
+  jamais 100) ; une liaison de rotation attend des **radians** (degrés × π/180). Une erreur d'unité sur
+  l'échelle a rendu les trous des yeux gigantesques et masqué tout le reste. Avant d'exporter, vérifie
+  qu'avec toutes les valeurs du View Model à 0, chaque propriété liée vaut exactement sa valeur de base.
+- L'éditeur ne réévalue pas les liaisons hors du mode Play : le seul test fiable est l'export `.riv`
+  chargé dans `index.html` (diagnostics : `?push=0`, `?gpu=0`, `?only=faceJaw,...`).
 - Si un outil MCP échoue ou ne sait pas faire quelque chose (par exemple importer un SVG), dis-le et donne
   à l'utilisateur l'étape manuelle exacte.
 
