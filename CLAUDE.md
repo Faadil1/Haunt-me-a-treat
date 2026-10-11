@@ -113,7 +113,7 @@ Quand `webcamMode` est faux :
 
 ## Phase 6 — GPU Canvas (shaders WGSL)
 
-Quand l'utilisateur le demande, avec les shaders fournis dans `shaders/` (à venir) : brume au sol,
+Quand l'utilisateur le demande, suis `shaders/README.md` (shader `NuitFX.wgsl` + script `NuitFX.luau`) : brume au sol,
 halo de la lampe de porche, lumière de lune sur le tissu. Utilise les outils MCP de scripts et shaders,
 recompile, lis la console et corrige les erreurs.
 
