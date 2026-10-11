@@ -198,7 +198,7 @@
   // ---------------------------------------------------------------------
   // Rive : chargement d'un .riv et liaison au contrat
   // ---------------------------------------------------------------------
-  let r = null, vmi = null;
+  let r = null, vmi = null, smInputs = {};
   const bound = { numbers: {}, booleans: {}, triggersIn: {} };
   const lastSent = {};
 
@@ -234,6 +234,10 @@
         log(`options : GPU Canvas ${OPT.gpu ? 'activé' : 'COUPÉ'}, envoi des valeurs ${OPT.push ? (OPT.only ? 'seulement ' + OPT.only.join(', ') : 'activé') : 'COUPÉ'}`);
       },
       onLoadError: (e) => log(`erreur de chargement Rive : ${e && e.data || e}`),
+      onStateChange: (e) => {
+        const states = (e && e.data || []).filter((x) => x && x !== 'Any State' && x !== 'Entry' && x !== 'Exit');
+        if (states.length){ log(`état → ${states.join(', ')}`); $('mode').textContent = `Rive · ${states[states.length - 1]}`; }
+      },
     });
   }
   $('rivFile').onchange = async (e) => {
@@ -257,12 +261,20 @@
       lines.push(mark(!!p, `${k} (trigger Rive → page)`));
       if (p) p.on(() => onRiveTrigger(k));
     }
+    smInputs = {};
+    const sm = r.stateMachineNames && r.stateMachineNames[0];
+    const inputs = (sm && r.stateMachineInputs(sm)) || [];
+    for (const i of inputs) smInputs[i.name] = i;
+    lines.push(inputs.length ? `Entrées de State Machine : ${inputs.map((i) => i.name).join(', ')}` : 'Entrées de State Machine : aucune (logique 100 % View Model)');
     $('contract').innerHTML = lines.join('\n');
     $('mode').textContent = 'Rive';
     log(`Rive chargé : ${label}`);
     if (cal.done) fireIn('calibrated');
   }
-  function fireIn(name){ const t = bound.triggersIn[name]; if (t) t.trigger(); }
+  function fireIn(name){
+    const t = bound.triggersIn[name]; if (t) t.trigger();
+    const i = smInputs[name]; if (i && i.fire) i.fire();      // au cas où la condition utilise une entrée de State Machine
+  }
   function onRiveTrigger(name){
     log(`Rive → page : ${name}`);
     if (name === 'snapshot') captureCard();
@@ -273,7 +285,7 @@
       const p = bound.numbers[k]; if (!p) continue;
       if (OPT.only && !OPT.only.includes(k)) continue;
       const v = +out[k].toFixed(3);
-      if (lastSent[k] !== v){ p.value = v; lastSent[k] = v; }
+      if (lastSent[k] !== v){ p.value = v; lastSent[k] = v; const i = smInputs[k]; if (i) i.value = v; }
     }
     for (const k in bound.booleans){
       const p = bound.booleans[k]; if (!p) continue;
