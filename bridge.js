@@ -190,7 +190,7 @@
       $('cal').style.display = 'none';
       log('calibrage OK — neutre : ' + RAW_KEYS.map((k) => `${k}=${cal.base[k].toFixed(2)}`).join(' '));
       fireIn('calibrated');
-      $('prompt').textContent = 'Le drap est sur toi. Bouge, cligne, fais des grimaces.';
+      $('prompt').textContent = vmi ? '' : 'Le drap est sur toi. Bouge, cligne, fais des grimaces.';
     };
     requestAnimationFrame(tick);
   }
@@ -303,7 +303,16 @@
     { who: 'Un enfant déguisé frappe chez TOI', ask: 'Fais-lui peur pour garder ton sac !', ok: () => out.faceScary > THRESH.kidFlee, final: true },
   ];
   const tour = { i: -1, hold: 0, t: 0, candies: 0, waiting: false, best: 0 };
-  $('tourBtn').onclick = () => { tour.i = 0; tour.candies = 0; tour.best = 0; nextDoor(); };
+  $('tourBtn').onclick = () => {
+    if (vmi){
+      // Avec un .riv : c'est la State Machine Rive qui mène la tournée. La page ne fait que la lancer.
+      $('prompt').textContent = ''; $('sub').textContent = '';
+      fireIn('calibrated');
+      log('tournée lancée dans Rive (trigger calibrated)');
+      return;
+    }
+    tour.i = 0; tour.candies = 0; tour.best = 0; nextDoor();
+  };
   function nextDoor(){
     tour.hold = 0; tour.t = 0; tour.waiting = false;
     if (tour.i >= DOORS.length){ tour.i = -1; return; }
