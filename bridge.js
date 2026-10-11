@@ -34,6 +34,10 @@
   const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 
   const $ = (id) => document.getElementById(id);
+  // Interrupteurs de diagnostic (dans l'URL) : ?gpu=0 (GPU Canvas coupé), ?push=0 (aucune valeur envoyée à Rive)
+  const Q = new URLSearchParams(location.search);
+  const OPT = { gpu: Q.get('gpu') !== '0', push: Q.get('push') !== '0',
+    only: Q.get('only') ? Q.get('only').split(',').map((x) => x.trim()) : null };   // ?only=faceJaw,faceSmile
   const logEl = $('log');
   const log = (m) => { logEl.textContent = `[${new Date().toLocaleTimeString()}] ${m}\n` + logEl.textContent; };
   const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -207,12 +211,20 @@
       buffer, canvas,
       stateMachines: $('smName').value.trim() || 'State Machine 1',
       autoplay: true, autoBind: true,
-      enableGPUCanvas: true, useOffscreenRenderer: false,
+      enableGPUCanvas: OPT.gpu, useOffscreenRenderer: false,
+      assetLoader: (asset, bytes) => {
+        // diagnostic : un asset embarqué arrive avec ses octets ; sinon il est hébergé (CDN) ou référencé
+        const kind = asset.isImage ? 'image' : asset.isFont ? 'police' : asset.isAudio ? 'son' : 'asset';
+        const how = bytes && bytes.length ? `embarqué (${Math.round(bytes.length / 1024)} Ko)` : (asset.cdnUuid ? 'hébergé sur le CDN Rive' : 'RÉFÉRENCÉ : non inclus dans le .riv');
+        log(`${kind} « ${asset.name} » : ${how}`);
+        return false;   // laisse le runtime charger normalement
+      },
       layout: new rive.Layout({ fit: rive.Fit.Contain, alignment: rive.Alignment.Center }),
       onLoad: () => {
         r.resizeDrawingSurfaceToCanvas();
         vmi = r.viewModelInstance;
         bindContract(label);
+        log(`options : GPU Canvas ${OPT.gpu ? 'activé' : 'COUPÉ'}, envoi des valeurs ${OPT.push ? (OPT.only ? 'seulement ' + OPT.only.join(', ') : 'activé') : 'COUPÉ'}`);
       },
       onLoadError: (e) => log(`erreur de chargement Rive : ${e && e.data || e}`),
     });
@@ -249,9 +261,10 @@
     if (name === 'snapshot') captureCard();
   }
   function pushToRive(){
-    if (!vmi) return;
+    if (!vmi || !OPT.push) return;
     for (const k in bound.numbers){
       const p = bound.numbers[k]; if (!p) continue;
+      if (OPT.only && !OPT.only.includes(k)) continue;
       const v = +out[k].toFixed(3);
       if (lastSent[k] !== v){ p.value = v; lastSent[k] = v; }
     }
