@@ -119,6 +119,7 @@
       try { landmarker = await FaceLandmarker.createFromOptions(fileset, opts('GPU')); log('MediaPipe chargé (GPU)'); }
       catch { landmarker = await FaceLandmarker.createFromOptions(fileset, opts('CPU')); log('MediaPipe chargé (CPU)'); }
       out.webcamMode = true;
+      document.querySelector('.hud').classList.add('cam');
       $('camBtn').textContent = 'Recalibrer';
       $('camBtn').disabled = false;
       $('camBtn').onclick = calibrate;
@@ -249,6 +250,8 @@
       onLoad: () => {
         r.resizeDrawingSurfaceToCanvas();
         vmi = r.viewModelInstance;
+        document.querySelector('.hud').classList.add('compact');
+        $('privacy').style.display = 'none';
         bindContract(label);
         log(`State Machine : ${sm || 'aucune'} · GPU Canvas ${OPT.gpu ? 'activé' : 'COUPÉ'} · envoi des valeurs ${OPT.push ? (OPT.only ? 'seulement ' + OPT.only.join(', ') : 'activé') : 'COUPÉ'}`);
       },

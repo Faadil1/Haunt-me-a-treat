@@ -13,6 +13,13 @@
   #riveCanvas{display:none}
   .hud{position:absolute;left:16px;right:16px;bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;pointer-events:none}
   .hud>*{pointer-events:auto}
+  /* Quand Rive mène le jeu, la barre se range en haut à droite pour libérer le bas de l'écran (consignes Rive) */
+  .hud.compact{left:auto;right:12px;top:12px;bottom:auto;justify-content:flex-end;gap:6px}
+  .hud.compact button,.hud.compact .file{padding:6px 10px;font-size:12px;border-radius:8px;opacity:.75}
+  .hud.compact button:hover,.hud.compact .file:hover{opacity:1}
+  .hud.compact.cam .hold{display:none}
+  #debug{z-index:5}
+  .hud.compact ~ #debug{top:56px;max-height:calc(100% - 70px)}
   button,.file{background:#221e2cdd;color:var(--ink);border:1px solid #3a3348;border-radius:10px;padding:10px 16px;font:inherit;cursor:pointer;backdrop-filter:blur(6px)}
   button.primary{background:var(--acc);color:#120d1c;border-color:var(--acc);font-weight:700}
   button:disabled{opacity:.45;cursor:default}
