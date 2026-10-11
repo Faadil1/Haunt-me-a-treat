@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TOC TOC — test de détection</title>
+<style>
+  :root{--bg:#0d0b0a;--panel:#171311;--ink:#e9dfd3;--mute:#8d8177;--wood:#5b3a22;--wood2:#3e2717;--glow:#ffb35c;--ok:#7fd18b;--bad:#ff6b5e}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+  main{max-width:920px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:.02em}
+  .sub{color:var(--mute);margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid #2a221d;border-radius:12px;padding:14px}
+  .card h2{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);margin:0 0 10px}
+  button{background:#2a211b;color:var(--ink);border:1px solid #4a3a2e;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer}
+  button.primary{background:var(--glow);color:#1a120b;border-color:var(--glow);font-weight:600}
+  button:disabled{opacity:.45;cursor:default}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
+  label{display:block;font-size:13px;color:var(--mute);margin-top:10px}
+  input[type=range]{width:100%}
+  .stage{position:relative;height:330px;display:flex;align-items:flex-end;justify-content:center;background:radial-gradient(ellipse at 50% 100%,#1f1712 0%,#0d0b0a 70%);border-radius:12px;overflow:hidden;cursor:pointer;user-select:none}
+  .door{width:170px;height:280px;background:linear-gradient(90deg,var(--wood2),var(--wood) 30%,var(--wood) 70%,var(--wood2));border:6px solid #2b1a0f;border-bottom:none;border-radius:6px 6px 0 0;position:relative;transform-origin:50% 100%}
+  .door::before,.door::after{content:"";position:absolute;left:18px;right:18px;height:90px;border:3px solid #2b1a0f;border-radius:4px}
+  .door::before{top:22px}.door::after{top:140px}
+  .knob{position:absolute;right:16px;top:150px;width:14px;height:14px;border-radius:50%;background:#b78a4c;z-index:2}
+  .light{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:190px;height:6px;background:var(--glow);filter:blur(6px);opacity:.15;transition:opacity .25s}
+  .door.hit{animation:hit .12s ease-out}
+  .door.bulge{animation:bulge .22s ease-out}
+  @keyframes hit{0%{transform:translateX(0)}30%{transform:translateX(-3px) rotate(-.4deg)}60%{transform:translateX(2px)}100%{transform:none}}
+  @keyframes bulge{0%{transform:scale(1)}35%{transform:scale(1.035,1.02)}100%{transform:scale(1)}}
+  .hint{position:absolute;top:12px;left:0;right:0;text-align:center;color:var(--mute);font-size:13px}
+  canvas{width:100%;height:110px;background:#0f0c0b;border-radius:8px;display:block}
+  .log{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:190px;overflow:auto;background:#0f0c0b;border-radius:8px;padding:8px;white-space:pre-wrap}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #3a2e26}
+  .ok{color:var(--ok)}.bad{color:var(--bad)}
+  .big{font-size:28px;font-weight:700}
+  ol{margin:6px 0 0 18px;padding:0}
+  li{margin:4px 0}
+  .locks{display:flex;gap:8px;margin-top:6px}
+  .lock{width:22px;height:22px;border-radius:50%;border:2px solid #4a3a2e}
+  .lock.on{background:var(--glow);border-color:var(--glow)}
+</style>
+</head>
+<body>
+<main>
+  <h1>TOC TOC — test de détection des coups</h1>
+  <p class="sub">But : savoir en 5 minutes si le navigateur entend tes coups sur le bureau de façon fiable. Rien n'est enregistré ni envoyé : tout reste dans cette page.</p>
+
+  <div class="row">
+    <button id="start" class="primary">Activer le micro</button>
+    <button id="first" disabled>Mode : elle frappe en premier</button>
+    <span id="status" class="pill">micro inactif</span>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="stage" id="stage" title="Clic = coup de secours">
+        <div class="hint">Frappe sur ton bureau (ou clique la porte en secours)</div>
+        <div class="door" id="door"><div class="knob"></div></div>
+        <div class="light" id="light"></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Serrures (mode « elle frappe en premier »)</h2>
+        <div class="locks" id="locks"></div>
+        <div id="round" style="margin-top:8px;color:var(--mute)">Recopie son rythme pour tourner un verrou.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Niveau du micro</h2>
+        <canvas id="meter" width="800" height="220"></canvas>
+        <div class="row" style="justify-content:space-between">
+          <span>Coups détectés : <span class="big" id="count">0</span></span>
+          <button id="reset">Remettre à zéro</button>
+        </div>
+        <label>Seuil minimum (plus bas = plus sensible) : <span id="minV"></span></label>
+        <input id="minAbs" type="range" min="0.005" max="0.3" step="0.005" value="0.04">
+        <label>Attaque requise (plus haut = ignore mieux la voix) : <span id="atkV"></span></label>
+        <input id="attack" type="range" min="1.5" max="12" step="0.5" value="4">
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Diagnostic du micro</h2>
+        <div id="diag" class="log">Active le micro pour voir les réglages réellement appliqués.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Les 4 tests à faire (5 minutes)</h2>
+    <ol>
+      <li><b>Fiabilité :</b> frappe 10 coups distincts sur le bureau, à 30 cm de l'ordinateur. Bon résultat : 9 ou 10 détectés.</li>
+      <li><b>Faux positifs :</b> parle normalement pendant 10 secondes. Bon résultat : 0 à 1 coup détecté. Sinon monte « Attaque requise ».</li>
+      <li><b>La blague :</b> frappe « toc, toc-toc, toc, toc » (shave and a haircut). Elle doit répondre « toc, toc ».</li>
+      <li><b>Le frisson :</b> haut-parleurs, pas de casque. Est-ce que sa réponse donne l'impression de venir de ton bureau ?</li>
+    </ol>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Journal</h2>
+    <div id="log" class="log"></div>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const logEl = $('log');
+  const log = (m) => { logEl.textContent = `[${new Date().toLocaleTimeString()}] ${m}\n` + logEl.textContent; };
+
+  let ctx, node, stream;
+  let count = 0;
+  let onsets = [];          // temps (s) des coups de la phrase en cours
+  let phraseTimer = null;
+  let replyTimers = [];
+  let mode = 'free';        // 'free' | 'listen'
+  let target = null;        // rythme à recopier
+  let locks = 0;
+  const LOCKS = 4;
+
+  // ---------- Détecteur dans un AudioWorklet ----------
+  const workletSrc = `
+  class KnockDetector extends AudioWorkletProcessor {
+    constructor(){
+      super();
+      this.floor = 0.003; this.minAbs = 0.04; this.attack = 4; this.ratio = 5;
+      this.refr = 0.09; this.last = -1; this.gateUntil = 0;
+      this.prevPk = 0.001; this.meterMax = 0; this.n = 0;
+      this.port.onmessage = (e) => Object.assign(this, e.data);
+    }
+    process(inputs){
+      const ch = inputs[0] && inputs[0][0];
+      if (!ch) return true;
+      let pk = 0;
+      for (let i = 0; i < ch.length; i++){ const v = Math.abs(ch[i]); if (v > pk) pk = v; }
+      const t = currentTime;
+      const atk = pk / (this.prevPk + 1e-4);
+      const gated = t < this.gateUntil;
+      if (!gated && pk > this.minAbs && pk > this.floor * this.ratio && atk > this.attack && (t - this.last) > this.refr){
+        this.last = t;
+        this.port.postMessage({ type: 'knock', t, pk, atk });
+      }
+      // plancher de bruit lent (ignore les pics)
+      const sample = Math.min(pk, this.floor * 3 + 0.002);
+      this.floor = Math.max(0.0005, this.floor * 0.997 + sample * 0.003);
+      this.prevPk = this.prevPk * 0.6 + pk * 0.4;
+      if (pk > this.meterMax) this.meterMax = pk;
+      if (++this.n % 6 === 0){
+        this.port.postMessage({ type: 'level', pk: this.meterMax, floor: this.floor, gated });
+        this.meterMax = 0;
+      }
+      return true;
+    }
+  }
+  registerProcessor('knock-detector', KnockDetector);`;
+
+  // ---------- Repli : même détecteur, sur le fil principal ----------
+  function makeFallbackDetector(src){
+    const port = { onmessage: null, postMessage: (d) => Object.assign(det, d) };
+    const emit = (data) => port.onmessage && port.onmessage({ data });
+    const det = {
+      floor: 0.003, minAbs: 0.04, attack: 4, ratio: 5, refr: 0.09, last: -1, gateUntil: 0,
+      prevPk: 0.001, meterMax: 0, n: 0,
+      block(ch, start, end, t){
+        let pk = 0;
+        for (let i = start; i < end; i++){ const v = Math.abs(ch[i]); if (v > pk) pk = v; }
+        const atk = pk / (this.prevPk + 1e-4);
+        const gated = t < this.gateUntil;
+        if (!gated && pk > this.minAbs && pk > this.floor * this.ratio && atk > this.attack && (t - this.last) > this.refr){
+          this.last = t; emit({ type: 'knock', t, pk, atk });
+        }
+        const sample = Math.min(pk, this.floor * 3 + 0.002);
+        this.floor = Math.max(0.0005, this.floor * 0.997 + sample * 0.003);
+        this.prevPk = this.prevPk * 0.6 + pk * 0.4;
+        if (pk > this.meterMax) this.meterMax = pk;
+        if (++this.n % 6 === 0){ emit({ type: 'level', pk: this.meterMax, floor: this.floor, gated }); this.meterMax = 0; }
+      }
+    };
+    const sp = ctx.createScriptProcessor(512, 1, 1);
+    sp.onaudioprocess = (e) => {
+      const ch = e.inputBuffer.getChannelData(0);
+      const t0 = ctx.currentTime;
+      for (let s = 0; s < ch.length; s += 128) det.block(ch, s, Math.min(s + 128, ch.length), t0 + s / ctx.sampleRate);
+    };
+    const mute = ctx.createGain(); mute.gain.value = 0;
+    src.connect(sp); sp.connect(mute).connect(ctx.destination);
+    return { port, _keep: sp };
+  }
+
+  // ---------- Son de coup synthétisé (grave, sec, "venant du bureau") ----------
+  let noiseBuf;
+  function makeNoise(){
+    const len = Math.floor(ctx.sampleRate * 0.08);
+    noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+  }
+  function knockSound(when, strength = 1){
+    const out = ctx.createGain();
+    out.gain.value = 0.9 * strength;
+    out.connect(ctx.destination);
+    // corps : sinus qui descend
+    const o = ctx.createOscillator();
+    const og = ctx.createGain();
+    o.frequency.setValueAtTime(110, when);
+    o.frequency.exponentialRampToValueAtTime(52, when + 0.12);
+    og.gain.setValueAtTime(0.0001, when);
+    og.gain.exponentialRampToValueAtTime(1, when + 0.003);
+    og.gain.exponentialRampToValueAtTime(0.0001, when + 0.16);
+    o.connect(og).connect(out);
+    o.start(when); o.stop(when + 0.2);
+    // impact : bruit filtré bois
+    const n = ctx.createBufferSource(); n.buffer = noiseBuf;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 650; bp.Q.value = 1.2;
+    const ng = ctx.createGain(); ng.gain.value = 0.6;
+    n.connect(bp).connect(ng).connect(out);
+    n.start(when);
+  }
+  // Joue une suite de coups ; ferme l'oreille du détecteur pendant ce temps
+  function playKnocks(times, onEach){
+    const now = ctx.currentTime;
+    const start = now + 0.05;
+    const end = start + times[times.length - 1] + 0.25;
+    node.port.postMessage({ gateUntil: end });
+    times.forEach((dt, i) => {
+      knockSound(start + dt, 1);
+      replyTimers.push(setTimeout(() => { creatureHit(); onEach && onEach(i); }, (start + dt - now) * 1000));
+    });
+    return end - now;
+  }
+
+  // ---------- Visuels ----------
+  const door = $('door'), light = $('light');
+  function userHit(){
+    door.classList.remove('hit'); void door.offsetWidth; door.classList.add('hit');
+  }
+  function creatureHit(){
+    door.classList.remove('bulge'); void door.offsetWidth; door.classList.add('bulge');
+    light.style.opacity = 0.9; setTimeout(() => light.style.opacity = 0.15, 180);
+  }
+  function renderLocks(){
+    $('locks').innerHTML = Array.from({ length: LOCKS }, (_, i) => `<div class="lock ${i < locks ? 'on' : ''}"></div>`).join('');
+  }
+  renderLocks();
+
+  // ---------- Logique de phrase ----------
+  const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  function clearReplies(){ replyTimers.forEach(clearTimeout); replyTimers = []; }
+
+  function onKnock(t, src){
+    count++; $('count').textContent = count;
+    userHit();
+    onsets.push(t);
+    log(`coup ${src}${onsets.length > 1 ? `  (+${Math.round((t - onsets[onsets.length - 2]) * 1000)} ms)` : ''}`);
+    clearTimeout(phraseTimer);
+    clearReplies();
+
+    if (mode === 'free' && onsets.length === 5){
+      // "shave and a haircut" -> "two bits", sans attendre le silence
+      const iv = onsets.slice(1).map((v, i) => v - onsets[i]);
+      const gap = Math.min(0.9, Math.max(0.28, median(iv) * 2));
+      replyTimers.push(setTimeout(() => {
+        log('→ elle complète : toc, toc');
+        playKnocks([0, gap]);
+        onsets = [];
+      }, gap * 1000));
+      return;
+    }
+    phraseTimer = setTimeout(endPhrase, 1100);
+  }
+
+  function endPhrase(){
+    const ph = onsets; onsets = [];
+    if (!ph.length) return;
+    if (mode === 'listen') return judge(ph);
+    if (ph.length >= 2){
+      // elle répète ton rythme... avec un coup de trop, en retard
+      const rel = ph.map((v) => v - ph[0]);
+      const last = rel[rel.length - 1];
+      const iv = median(rel.slice(1).map((v, i) => v - rel[i])) || 0.3;
+      rel.push(last + iv * 1.7);
+      log(`→ elle répète tes ${ph.length} coups… et en ajoute un`);
+      replyTimers.push(setTimeout(() => playKnocks(rel), 450));
+    }
+  }
+
+  // ---------- Mode "elle frappe en premier" ----------
+  const PATTERNS = [
+    [0, 0.3, 0.6],
+    [0, 0.25, 0.75, 1.0],
+    [0, 0.5, 0.75, 1.0, 1.5],
+    [0, 0.2, 0.4, 1.0],
+    [0, 0.6, 0.8, 1.0, 1.2, 1.8],
+  ];
+  function nextRound(){
+    if (locks >= LOCKS){ $('round').innerHTML = '<span class="ok">La porte s\'ouvre.</span> (ici viendra le retournement)'; mode = 'free'; return; }
+    target = PATTERNS[Math.min(locks + Math.floor(Math.random() * 2), PATTERNS.length - 1)];
+    $('round').textContent = `Écoute… (${target.length} coups)`;
+    mode = 'listen-wait';
+    const dur = playKnocks(target);
+    setTimeout(() => { mode = 'listen'; onsets = []; $('round').textContent = 'À toi. Recopie son rythme.'; }, dur * 1000 + 100);
+  }
+  function judge(ph){
+    const rel = ph.map((v) => v - ph[0]);
+    let ok = rel.length === target.length;
+    if (ok){
+      const span = rel[rel.length - 1] || 1, tspan = target[target.length - 1] || 1;
+      ok = rel.every((v, i) => Math.abs(v / span - target[i] / tspan) < 0.14);
+    }
+    if (ok){ locks++; renderLocks(); log(`✓ rythme recopié (${rel.length} coups)`); $('round').innerHTML = '<span class="ok">Un verrou tourne.</span>'; }
+    else { log(`✗ attendu ${target.length} coups, reçu ${rel.length}`); $('round').innerHTML = `<span class="bad">Raté.</span> Elle recommence.`; }
+    setTimeout(nextRound, 1300);
+  }
+  $('first').onclick = () => { locks = 0; renderLocks(); clearReplies(); onsets = []; nextRound(); };
+
+  // ---------- Démarrage micro ----------
+  $('start').onclick = async () => {
+    try {
+      ctx = new AudioContext({ latencyHint: 'interactive' });
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 }
+      });
+      const src = ctx.createMediaStreamSource(stream);
+      let engine = 'AudioWorklet';
+      try {
+        const url = URL.createObjectURL(new Blob([workletSrc], { type: 'application/javascript' }));
+        await ctx.audioWorklet.addModule(url);
+        node = new AudioWorkletNode(ctx, 'knock-detector');
+        src.connect(node);
+      } catch (e) {
+        // Fichier local (origine "null") : Chrome refuse le module. Repli sur ScriptProcessor.
+        engine = 'ScriptProcessor (repli fichier local)';
+        node = makeFallbackDetector(src);
+      }
+      log(`moteur de détection : ${engine}`);
+      makeNoise();
+      pushParams();
+      node.port.onmessage = (e) => {
+        const m = e.data;
+        if (m.type === 'knock' && mode !== 'listen-wait') onKnock(m.t, `micro  pic=${m.pk.toFixed(3)} attaque=${m.atk.toFixed(1)}`);
+        if (m.type === 'level') pushLevel(m);
+      };
+      const s = stream.getAudioTracks()[0].getSettings();
+      const fmt = (v) => v === false ? '<span class="ok">désactivé ✓</span>' : v === true ? '<span class="bad">ACTIF ✗</span>' : '<span>non signalé</span>';
+      $('diag').innerHTML =
+        `Micro : ${stream.getAudioTracks()[0].label || 'inconnu'}\n` +
+        `Suppression de bruit : ${fmt(s.noiseSuppression)}\n` +
+        `Annulation d'écho : ${fmt(s.echoCancellation)}\n` +
+        `Gain automatique : ${fmt(s.autoGainControl)}\n` +
+        `Fréquence : ${ctx.sampleRate} Hz · latence de base : ${Math.round((ctx.baseLatency || 0) * 1000)} ms\n` +
+        `Navigateur : ${navigator.userAgent.match(/(Chrome|Firefox|Safari|Edg)\/[\d.]+/g)?.join(' ') || navigator.userAgent}`;
+      $('status').textContent = 'micro actif'; $('status').className = 'pill ok';
+      $('start').disabled = true; $('first').disabled = false;
+      log('micro activé — frappe sur ton bureau');
+    } catch (err){
+      $('status').textContent = 'micro refusé ou indisponible'; $('status').className = 'pill bad';
+      log(`erreur : ${err.name} — ${err.message}. Si tu as ouvert le fichier directement, essaie via un petit serveur local (voir les instructions).`);
+    }
+  };
+
+  // Coup de secours au clic
+  $('stage').onclick = () => {
+    if (!ctx){ log('active le micro d\'abord (le clic marche aussi après)'); return; }
+    if (mode === 'listen-wait') return;
+    onKnock(ctx.currentTime, 'clic (secours)');
+  };
+
+  $('reset').onclick = () => { count = 0; $('count').textContent = 0; onsets = []; clearReplies(); log('remise à zéro'); };
+
+  // ---------- Réglages ----------
+  function pushParams(){
+    const minAbs = +$('minAbs').value, attack = +$('attack').value;
+    $('minV').textContent = minAbs.toFixed(3); $('atkV').textContent = attack.toFixed(1);
+    node && node.port.postMessage({ minAbs, attack });
+  }
+  $('minAbs').oninput = pushParams; $('attack').oninput = pushParams; pushParams();
+
+  // ---------- Vu-mètre ----------
+  const cv = $('meter'), g = cv.getContext('2d');
+  const hist = [];
+  function pushLevel(m){ hist.push(m); if (hist.length > 200) hist.shift(); }
+  function draw(){
+    const W = cv.width, H = cv.height;
+    g.clearRect(0, 0, W, H);
+    const y = (v) => H - Math.min(1, Math.sqrt(v / 0.5)) * H;
+    const bw = W / 200;
+    hist.forEach((m, i) => {
+      g.fillStyle = m.gated ? '#4a3a2e' : (m.pk > +$('minAbs').value ? '#ffb35c' : '#6b5a4c');
+      g.fillRect(i * bw, y(m.pk), bw - 1, H - y(m.pk));
+    });
+    g.strokeStyle = '#ff6b5e'; g.setLineDash([6, 6]); g.beginPath();
+    g.moveTo(0, y(+$('minAbs').value)); g.lineTo(W, y(+$('minAbs').value)); g.stroke(); g.setLineDash([]);
+    if (hist.length){
+      g.strokeStyle = '#7fd18b'; g.beginPath();
+      hist.forEach((m, i) => { const yy = y(m.floor * 5); i ? g.lineTo(i * bw, yy) : g.moveTo(0, yy); }); g.stroke();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

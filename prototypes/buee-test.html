@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BUÉE — test du souffle</title>
+<style>
+  :root{--bg:#0a0d10;--panel:#12171c;--ink:#dfe7ee;--mute:#7f8d99;--ok:#7fd18b;--bad:#ff6b5e;--acc:#9fd3ff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+  main{max-width:960px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--mute);margin:0 0 16px}
+  .grid{display:grid;grid-template-columns:3fr 2fr;gap:16px}
+  @media (max-width:780px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid #1f2a33;border-radius:12px;padding:14px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);margin:0 0 10px}
+  button{background:#1c252d;color:var(--ink);border:1px solid #2e3d49;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer}
+  button.primary{background:var(--acc);color:#071017;border-color:var(--acc);font-weight:600}
+  button:disabled{opacity:.45}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #2e3d49}
+  .ok{color:var(--ok)}.bad{color:var(--bad)}
+  #win{width:100%;aspect-ratio:4/3;border-radius:10px;display:block;cursor:crosshair;touch-action:none;background:#05080b}
+  .bar{height:12px;background:#0c1116;border-radius:6px;overflow:hidden;margin:4px 0 10px}
+  .bar>i{display:block;height:100%;width:0;background:var(--acc);transition:width .05s}
+  .lbl{font-size:13px;color:var(--mute);display:flex;justify-content:space-between}
+  .state{font-size:22px;font-weight:700;margin:6px 0 12px}
+  label{font-size:13px;color:var(--mute);display:block;margin-top:8px}
+  input[type=range]{width:100%}
+  .log{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:170px;overflow:auto;background:#0c1116;border-radius:8px;padding:8px;white-space:pre-wrap}
+  ol{margin:6px 0 0 18px;padding:0}li{margin:4px 0}
+</style>
+</head>
+<body>
+<main>
+  <h1>BUÉE — test du souffle</h1>
+  <p class="sub">But : savoir si ton micro distingue un souffle de la voix et du bruit de la pièce. Tout reste dans cette page, rien n'est enregistré.</p>
+  <div class="row">
+    <button id="start" class="primary">Activer le micro</button>
+    <span id="status" class="pill">micro inactif</span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>La vitre (souffle = buée, glisse la souris = essuyer)</h2>
+      <canvas id="win" width="800" height="600"></canvas>
+    </div>
+    <div>
+      <div class="card">
+        <h2>Détection</h2>
+        <div class="state" id="state">—</div>
+        <div class="lbl"><span>Énergie</span><span id="eV">0</span></div>
+        <div class="bar"><i id="eB"></i></div>
+        <div class="lbl"><span>« Platitude » du spectre (souffle = haut, voix = bas)</span><span id="fV">0</span></div>
+        <div class="bar"><i id="fB"></i></div>
+        <div class="lbl"><span>Part des graves (le souffle sur le micro gronde)</span><span id="lV">0</span></div>
+        <div class="bar"><i id="lB"></i></div>
+        <label>Énergie minimum : <span id="thE"></span></label>
+        <input id="minE" type="range" min="0.002" max="0.08" step="0.001" value="0.012">
+        <label>Platitude minimum : <span id="thF"></span></label>
+        <input id="minF" type="range" min="0.05" max="0.6" step="0.01" value="0.22">
+        <div class="lbl" style="margin-top:12px"><span>Souffle cumulé détecté</span><span id="tot">0,0 s</span></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Diagnostic</h2>
+        <div id="diag" class="log">Active le micro.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Les 4 tests (5 minutes)</h2>
+    <ol>
+      <li><b>Souffle :</b> souffle doucement vers l'écran, bouche à 20–30 cm, 3 fois 2 secondes. La vitre doit s'embuer à chaque fois.</li>
+      <li><b>Voix :</b> parle normalement 10 secondes. Bon résultat : moins de 0,5 s de « souffle » cumulé.</li>
+      <li><b>Pièce :</b> reste silencieux 10 secondes (ventilateur, clavier…). Bon résultat : presque rien.</li>
+      <li><b>Le geste :</b> embue, puis essuie à la souris. Est-ce que ça donne envie de le refaire ?</li>
+    </ol>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>Journal</h2>
+    <div id="log" class="log"></div>
+  </div>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const log = (m) => { $('log').textContent = `[${new Date().toLocaleTimeString()}] ${m}\n` + $('log').textContent; };
+
+  // ---------- Vitre : scène + buée + essuyage ----------
+  const cv = $('win'), g = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const fog = document.createElement('canvas'); fog.width = W / 4; fog.height = H / 4;   // densité basse résolution
+  const fg = fog.getContext('2d', { willReadFrequently: true });
+  const dens = new Float32Array(fog.width * fog.height);
+  let breathing = 0;          // 0..1 force du souffle détecté
+  let mouth = { x: 0.5, y: 0.55 };
+
+  function drawScene(t){
+    // nuit derrière la vitre
+    const sky = g.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#0b1622'); sky.addColorStop(1, '#03070b');
+    g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(200,220,255,.85)'; g.beginPath(); g.arc(W * .78, H * .2, 26, 0, 7); g.fill();
+    // silhouette collée à la vitre (révélée par la buée)
+    g.save(); g.translate(W * .5, H * .58);
+    g.fillStyle = '#0d1116';
+    g.beginPath(); g.ellipse(0, -40, 95, 120, 0, 0, 7); g.fill();
+    g.beginPath(); g.ellipse(0, 150, 170, 90, 0, 0, 7); g.fill();
+    g.restore();
+    // cadre de fenêtre
+    g.strokeStyle = '#1c2630'; g.lineWidth = 18; g.strokeRect(9, 9, W - 18, H - 18);
+    g.beginPath(); g.moveTo(W / 2, 0); g.lineTo(W / 2, H); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.lineWidth = 10; g.stroke();
+  }
+
+  function stepFog(dt){
+    const fw = fog.width, fh = fog.height;
+    const cx = mouth.x * fw, cy = mouth.y * fh, r = fw * 0.45;
+    for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++){
+      const i = y * fw + x;
+      const d = Math.hypot(x - cx, (y - cy) * 1.2) / r;
+      const add = breathing > 0 ? Math.max(0, 1 - d) * breathing * dt * 2.2 : 0;
+      dens[i] = Math.min(1, Math.max(0, dens[i] + add - dt * 0.035));   // évaporation lente
+    }
+    const img = fg.createImageData(fw, fh);
+    for (let i = 0; i < dens.length; i++){
+      const a = dens[i];
+      // la buée révèle le visage : le visage apparaît plus clair là où la buée est dense
+      img.data[i * 4] = 205; img.data[i * 4 + 1] = 218; img.data[i * 4 + 2] = 228;
+      img.data[i * 4 + 3] = Math.round(a * 210);
+    }
+    fg.putImageData(img, 0, 0);
+  }
+
+  function wipe(px, py){
+    const fw = fog.width, fh = fog.height;
+    const cx = px * fw, cy = py * fh, r = fw * 0.06;
+    for (let y = Math.max(0, cy - r | 0); y < Math.min(fh, cy + r + 1); y++)
+      for (let x = Math.max(0, cx - r | 0); x < Math.min(fw, cx + r + 1); x++){
+        const d = Math.hypot(x - cx, y - cy) / r;
+        if (d < 1) dens[y * fw + x] *= d * d;
+      }
+  }
+
+  let last = performance.now();
+  function frame(now){
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    stepFog(dt);
+    drawScene(now);
+    g.save(); g.filter = 'blur(14px)'; g.imageSmoothingEnabled = true;
+    g.drawImage(fog, 0, 0, W, H); g.restore();
+    // le visage n'apparaît que DANS la buée (silhouette plus claire en contre-jour)
+    g.save(); g.globalCompositeOperation = 'source-atop';
+    g.restore();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  let down = false;
+  const pos = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
+  cv.addEventListener('pointerdown', (e) => { down = true; cv.setPointerCapture(e.pointerId); wipe(...pos(e)); });
+  cv.addEventListener('pointermove', (e) => { const p = pos(e); if (down) wipe(...p); });
+  cv.addEventListener('pointerup', () => down = false);
+  // sans clic : survoler = essuyer aussi (souris)
+  cv.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && e.buttons === 0 && e.shiftKey) wipe(...pos(e)); });
+
+  // ---------- Détection du souffle (AnalyserNode : marche en fichier local) ----------
+  let ctx, an, freq, time, total = 0;
+  $('start').onclick = async () => {
+    try {
+      ctx = new AudioContext();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      const src = ctx.createMediaStreamSource(stream);
+      an = ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0.2;
+      src.connect(an);
+      freq = new Float32Array(an.frequencyBinCount); time = new Float32Array(an.fftSize);
+      const s = stream.getAudioTracks()[0].getSettings();
+      const fmt = (v) => v === false ? 'désactivé ✓' : v === true ? 'ACTIF ✗' : 'non signalé';
+      $('diag').textContent = `Micro : ${stream.getAudioTracks()[0].label}\nSuppression de bruit : ${fmt(s.noiseSuppression)}\nAnnulation d'écho : ${fmt(s.echoCancellation)}\nGain auto : ${fmt(s.autoGainControl)}\nFréquence : ${ctx.sampleRate} Hz`;
+      $('status').textContent = 'micro actif'; $('status').className = 'pill ok'; $('start').disabled = true;
+      log('micro activé — souffle doucement vers l\'écran');
+      loop();
+    } catch (err){
+      $('status').textContent = 'micro refusé ou indisponible'; $('status').className = 'pill bad';
+      log(`erreur : ${err.name} — ${err.message}`);
+    }
+  };
+
+  let hold = 0, was = false, lastT = 0;
+  function loop(){
+    an.getFloatTimeDomainData(time);
+    an.getFloatFrequencyData(freq);
+    let rms = 0; for (const v of time) rms += v * v; rms = Math.sqrt(rms / time.length);
+    const binHz = ctx.sampleRate / an.fftSize;
+    const lo = Math.floor(80 / binHz), hi = Math.floor(5000 / binHz), cut = Math.floor(500 / binHz);
+    let logSum = 0, linSum = 0, low = 0, n = 0;
+    for (let i = lo; i < hi; i++){
+      const p = Math.pow(10, freq[i] / 10) + 1e-12;
+      logSum += Math.log(p); linSum += p; n++;
+      if (i < cut) low += p;
+    }
+    const flat = Math.exp(logSum / n) / (linSum / n);        // 0 = tonal (voix), 1 = bruit blanc (souffle)
+    const lowShare = low / linSum;
+
+    const minE = +$('minE').value, minF = +$('minF').value;
+    $('thE').textContent = minE.toFixed(3); $('thF').textContent = minF.toFixed(2);
+    $('eV').textContent = rms.toFixed(3); $('eB').style.width = Math.min(100, rms / 0.1 * 100) + '%';
+    $('fV').textContent = flat.toFixed(2); $('fB').style.width = Math.min(100, flat * 100) + '%';
+    $('lV').textContent = lowShare.toFixed(2); $('lB').style.width = Math.min(100, lowShare * 100) + '%';
+
+    const candidate = rms > minE && flat > minF;
+    hold = candidate ? Math.min(hold + 1, 30) : Math.max(hold - 2, 0);   // il faut ~120 ms soutenus
+    const isBreath = hold >= 7;
+    const now = performance.now();
+    if (isBreath){ total += (now - lastT) / 1000; }
+    lastT = now;
+    breathing = isBreath ? Math.min(1, rms / (minE * 4)) : 0;
+    $('state').innerHTML = isBreath ? '<span class="ok">souffle détecté</span>' : (rms > minE ? '<span class="bad">son, pas un souffle</span>' : 'calme');
+    $('tot').textContent = total.toFixed(1).replace('.', ',') + ' s';
+    if (isBreath !== was){ log(isBreath ? `souffle ↑  énergie=${rms.toFixed(3)} platitude=${flat.toFixed(2)} graves=${lowShare.toFixed(2)}` : 'souffle ↓'); was = isBreath; }
+    requestAnimationFrame(loop);
+  }
+  log('tu peux essuyer la vitre en cliquant-glissant dessus');
+})();
+</script>
+</body>
+</html>

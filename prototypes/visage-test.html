@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VISAGE — test du costume</title>
+<style>
+  :root{--bg:#0b0a10;--panel:#14121b;--ink:#ece8f2;--mute:#8a8398;--acc:#c9b6ff;--ok:#7fd18b;--bad:#ff6b5e;--candy:#ffb35c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+  main{max-width:1000px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--mute);margin:0 0 16px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  button{background:#221e2c;color:var(--ink);border:1px solid #3a3348;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer}
+  button.primary{background:var(--acc);color:#120d1c;border-color:var(--acc);font-weight:600}
+  button:disabled{opacity:.45}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #3a3348}
+  .ok{color:var(--ok)}.bad{color:var(--bad)}
+  .grid{display:grid;grid-template-columns:3fr 2fr;gap:16px}
+  @media (max-width:800px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid #241f30;border-radius:12px;padding:14px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);margin:0 0 10px}
+  #stage{width:100%;aspect-ratio:4/3;border-radius:10px;display:block;background:#07060b}
+  .lbl{font-size:13px;color:var(--mute);display:flex;justify-content:space-between}
+  .bar{height:10px;background:#0d0b12;border-radius:5px;overflow:hidden;margin:3px 0 8px}
+  .bar>i{display:block;height:100%;width:0;background:var(--acc)}
+  .prompt{font-size:20px;font-weight:700;margin:4px 0 6px;min-height:30px}
+  .candies{font-size:15px;color:var(--candy)}
+  .log{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:160px;overflow:auto;background:#0d0b12;border-radius:8px;padding:8px;white-space:pre-wrap}
+  video{display:none}
+  #preview{width:120px;border-radius:8px;transform:scaleX(-1);display:none;margin-top:8px}
+  ol{margin:6px 0 0 18px;padding:0}li{margin:4px 0}
+  kbd{background:#221e2c;border:1px solid #3a3348;border-radius:4px;padding:0 5px;font-size:12px}
+</style>
+</head>
+<body>
+<main>
+  <h1>VISAGE — test du costume</h1>
+  <p class="sub">But : savoir si ton visage anime le drap de façon fluide et si les expressions sont reconnues de façon fiable. L'image de la webcam reste dans cette page : rien n'est envoyé ni enregistré.</p>
+  <div class="row">
+    <button id="start" class="primary">Activer la webcam</button>
+    <button id="play" disabled>Lancer la tournée (3 portes)</button>
+    <button id="prev" disabled>Voir/masquer la webcam</button>
+    <span id="status" class="pill">webcam inactive</span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Le fantôme (c'est toi)</h2>
+      <canvas id="stage" width="800" height="600"></canvas>
+      <div class="prompt" id="prompt">Active la webcam.</div>
+      <div class="candies" id="candies"></div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>Ce que le modèle lit sur ton visage</h2>
+        <div id="bars"></div>
+        <div class="lbl"><span>Images analysées / seconde</span><span id="fps">—</span></div>
+        <div class="lbl"><span>Visage détecté</span><span id="face">—</span></div>
+        <video id="video" playsinline muted></video>
+        <canvas id="preview" width="240" height="180"></canvas>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Secours sans caméra</h2>
+        <div style="color:var(--mute);font-size:13px">Maintiens <kbd>C</kbd> crier · <kbd>S</kbd> sourire · <kbd>G</kbd> grimace</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Les 4 tests (5 minutes)</h2>
+    <ol>
+      <li><b>Fluidité :</b> bouge la tête, cligne, ouvre la bouche. Le drap suit-il sans saccade ? Regarde le nombre d'images par seconde (bon : 20 ou plus).</li>
+      <li><b>Fiabilité :</b> lance la tournée. Les 3 portes doivent reconnaître crier, sourire et grimace sans que tu exagères de façon ridicule.</li>
+      <li><b>Lumière :</b> refais-le avec seulement la lumière de l'écran. Ça tient encore ?</li>
+      <li><b>Le plaisir :</b> est-ce que voir le drap faire tes grimaces te fait sourire ? Aurais-tu envie de le montrer à quelqu'un ?</li>
+    </ol>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>Journal</h2>
+    <div id="log" class="log"></div>
+  </div>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const log = (m) => { $('log').textContent = `[${new Date().toLocaleTimeString()}] ${m}\n` + $('log').textContent; };
+const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35';
+
+// ---------- État du visage (lissé) ----------
+const KEYS = [
+  ['jawOpen', 'Bouche ouverte'],
+  ['smile', 'Sourire'],
+  ['browDown', 'Sourcils froncés'],
+  ['browUp', 'Sourcils levés'],
+  ['blink', 'Clignement'],
+  ['scary', 'Score « effrayant »'],
+];
+$('bars').innerHTML = KEYS.map(([k, l]) => `<div class="lbl"><span>${l}</span><span id="v_${k}">0</span></div><div class="bar"><i id="b_${k}"></i></div>`).join('');
+const face = { jawOpen: 0, smile: 0, browDown: 0, browUp: 0, blink: 0, scary: 0, roll: 0, x: 0.5, y: 0.5, eyeL: [0.42, 0.45], eyeR: [0.58, 0.45], present: false };
+const keysDown = new Set();
+addEventListener('keydown', (e) => keysDown.add(e.key.toLowerCase()));
+addEventListener('keyup', (e) => keysDown.delete(e.key.toLowerCase()));
+
+function ease(cur, target, k = 0.35){ return cur + (target - cur) * k; }
+
+function applyBlend(cats){
+  const s = Object.fromEntries(cats.map((c) => [c.categoryName, c.score]));
+  const avg = (...n) => n.reduce((a, k) => a + (s[k] || 0), 0) / n.length;
+  const t = {
+    jawOpen: s.jawOpen || 0,
+    smile: avg('mouthSmileLeft', 'mouthSmileRight'),
+    browDown: avg('browDownLeft', 'browDownRight'),
+    browUp: s.browInnerUp || 0,
+    blink: avg('eyeBlinkLeft', 'eyeBlinkRight'),
+  };
+  t.scary = Math.min(1, t.browDown * 0.9 + t.jawOpen * 0.6 + avg('noseSneerLeft', 'noseSneerRight') * 0.8 + avg('mouthStretchLeft', 'mouthStretchRight') * 0.5);
+  for (const k in t) face[k] = ease(face[k], t[k]);
+}
+
+function applyKeys(){
+  if (!keysDown.size) return false;
+  const t = { jawOpen: keysDown.has('c') ? 0.9 : 0, smile: keysDown.has('s') ? 0.9 : 0, browDown: keysDown.has('g') ? 0.8 : 0, browUp: 0, blink: 0 };
+  t.scary = keysDown.has('g') ? 0.85 : 0;
+  for (const k in t) face[k] = ease(face[k], t[k]);
+  return true;
+}
+
+// ---------- Rendu du fantôme en drap ----------
+const cv = $('stage'), g = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+let tAnim = 0;
+function drawGhost(dt){
+  tAnim += dt;
+  // nuit + porche
+  const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#120f22'); sky.addColorStop(1, '#05040a');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(255,179,92,.10)'; g.beginPath(); g.ellipse(W * .5, H * .95, 360, 60, 0, 0, 7); g.fill();
+
+  const cx = W * 0.5 + (0.5 - face.x) * 220, cy = H * 0.5 + (face.y - 0.5) * 120;
+  g.save(); g.translate(cx, cy); g.rotate(-face.roll * 0.9);
+  const sway = Math.sin(tAnim * 1.6) * 6;
+  // drap
+  g.fillStyle = '#efeaf3';
+  g.shadowColor = 'rgba(200,180,255,.35)'; g.shadowBlur = 40;
+  g.beginPath();
+  g.moveTo(-150, 60);
+  g.bezierCurveTo(-160, -120, -90, -230, 0, -230);
+  g.bezierCurveTo(90, -230, 160, -120, 150, 60);
+  // bas ondulé
+  const folds = 6;
+  for (let i = 0; i <= folds; i++){
+    const x = 150 - (300 / folds) * i;
+    const y = 220 + Math.sin(tAnim * 2.2 + i) * 10 + (i % 2 ? 22 : 0) + sway;
+    g.lineTo(x, y);
+  }
+  g.closePath(); g.fill();
+  g.shadowBlur = 0;
+  // plis
+  g.strokeStyle = 'rgba(120,110,140,.25)'; g.lineWidth = 3;
+  for (const fx of [-70, 0, 70]){ g.beginPath(); g.moveTo(fx, 20); g.quadraticCurveTo(fx + sway, 120, fx * 1.2, 210); g.stroke(); }
+  // trous des yeux (suivent tes yeux, se ferment avec le clignement, s'agrandissent avec les sourcils levés)
+  const eyeH = 34 * (1 - face.blink * 0.9) * (1 + face.browUp * 0.5);
+  const eyeW = 26 * (1 + face.browUp * 0.25);
+  const browTilt = face.browDown * 0.5;
+  g.fillStyle = '#0b0910';
+  for (const [side, e] of [[-1, face.eyeL], [1, face.eyeR]]){
+    const ex = side * 52 + (e[0] - (side < 0 ? 0.42 : 0.58)) * -300;
+    const ey = -110 + (e[1] - 0.45) * 200;
+    g.save(); g.translate(ex, ey); g.rotate(side * browTilt);
+    g.beginPath(); g.ellipse(0, 0, eyeW, Math.max(2, eyeH), 0, 0, 7); g.fill();
+    g.restore();
+  }
+  // bouche : le tissu se creuse
+  const mo = face.jawOpen, sm = face.smile;
+  g.beginPath();
+  if (mo > 0.12){
+    g.ellipse(0, -30 + mo * 10, 22 + sm * 18, 8 + mo * 48, 0, 0, 7);
+  } else {
+    g.moveTo(-28 - sm * 14, -32); g.quadraticCurveTo(0, -32 + sm * 26 - face.browDown * 10, 28 + sm * 14, -32);
+    g.lineWidth = 6; g.strokeStyle = '#0b0910'; g.stroke();
+  }
+  g.fill();
+  g.restore();
+}
+
+// ---------- La tournée : 3 portes ----------
+const DOORS = [
+  { who: 'La mamie sourde', ask: 'CRIE « Trick or treat ! » (ouvre grand la bouche)', test: () => face.jawOpen > 0.55, fail: null },
+  { who: "L'enfant peureux", ask: 'SOURIS-lui gentiment (sans ouvrir la bouche)', test: () => face.smile > 0.5 && face.jawOpen < 0.35, fail: () => face.scary > 0.6 || face.jawOpen > 0.6, failMsg: "Tu lui as fait peur, il pleure. Pas de bonbon." },
+  { who: 'Le voisin blasé', ask: 'Fais ta grimace LA PLUS EFFRAYANTE', test: () => face.scary > 0.55, fail: null },
+];
+let waiting = false, round = -1, holdT = 0, candies = 0, best = { scary: 0, smile: 0, jawOpen: 0 }, roundT = 0;
+function startTour(){ round = 0; candies = 0; best = { scary: 0, smile: 0, jawOpen: 0 }; next(); }
+function next(){
+  holdT = 0; roundT = 0; waiting = false;
+  if (round >= DOORS.length){
+    $('prompt').innerHTML = `Fin de la tournée — ${candies}/3 bonbons. <span style="color:var(--mute);font-weight:400">(ici viendra la vraie fin, sans imitation)</span>`;
+    $('candies').textContent = `Ta carte : grimace la plus effrayante ${Math.round(best.scary * 100)} %, plus grand sourire ${Math.round(best.smile * 100)} %, plus grand cri ${Math.round(best.jawOpen * 100)} %.`;
+    log(`tournée finie : ${candies}/3`); round = -1; return;
+  }
+  const d = DOORS[round];
+  $('prompt').textContent = `${d.who} ouvre… ${d.ask}`;
+  $('candies').textContent = '🍬'.repeat(candies);
+}
+function stepTour(dt){
+  if (round < 0 || waiting || round >= DOORS.length) return;
+  const d = DOORS[round];
+  roundT += dt;
+  for (const k in best) best[k] = Math.max(best[k], face[k]);
+  if (d.fail && roundT > 0.8 && d.fail()){
+    log(`✗ ${d.who} : ${d.failMsg}`); $('prompt').textContent = d.failMsg;
+    round++; waiting = true; setTimeout(next, 1600); return;
+  }
+  holdT = d.test() ? holdT + dt : Math.max(0, holdT - dt * 2);
+  if (holdT > 0.6){
+    candies++; log(`✓ ${d.who} : bonbon (après ${roundT.toFixed(1)} s)`);
+    $('prompt').textContent = `${d.who} te donne un bonbon !`;
+    round++; waiting = true; setTimeout(next, 1200);
+  } else if (roundT > 12){
+    log(`✗ ${d.who} : temps écoulé`); $('prompt').textContent = 'Il referme la porte…';
+    round++; waiting = true; setTimeout(next, 1200);
+  }
+}
+
+// ---------- Boucle ----------
+let landmarker = null, video = $('video'), lastVideoT = -1, frames = 0, fpsT = performance.now(), lastFrame = performance.now(), showPreview = false;
+const pv = $('preview'), pg = pv.getContext('2d');
+
+function loop(now){
+  const dt = Math.min(0.1, (now - lastFrame) / 1000); lastFrame = now;
+  const usedKeys = applyKeys();
+  if (!usedKeys && landmarker && video.readyState >= 2 && video.currentTime !== lastVideoT){
+    lastVideoT = video.currentTime;
+    const res = landmarker.detectForVideo(video, now);
+    frames++;
+    face.present = !!(res.faceLandmarks && res.faceLandmarks.length);
+    if (face.present){
+      applyBlend(res.faceBlendshapes[0].categories);
+      const lm = res.faceLandmarks[0];
+      const L = lm[468] || lm[33], R = lm[473] || lm[263];
+      // miroir : la gauche de l'image est ta droite
+      face.eyeL = [ease(face.eyeL[0], 1 - R.x), ease(face.eyeL[1], R.y)];
+      face.eyeR = [ease(face.eyeR[0], 1 - L.x), ease(face.eyeR[1], L.y)];
+      face.roll = ease(face.roll, Math.atan2(R.y - L.y, R.x - L.x) * -1);
+      const nose = lm[1]; face.x = ease(face.x, nose.x, 0.25); face.y = ease(face.y, nose.y, 0.25);
+    }
+    if (showPreview){ pg.drawImage(video, 0, 0, pv.width, pv.height); }
+  }
+  if (now - fpsT > 1000){ $('fps').textContent = landmarker ? frames : '—'; frames = 0; fpsT = now; $('face').innerHTML = face.present || usedKeys ? '<span class="ok">oui</span>' : '<span class="bad">non</span>'; }
+  for (const [k] of KEYS){ $('v_' + k).textContent = face[k].toFixed(2); $('b_' + k).style.width = Math.min(100, face[k] * 100) + '%'; }
+  stepTour(dt);
+  drawGhost(dt);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ---------- Démarrage ----------
+$('start').onclick = async () => {
+  $('start').disabled = true; $('status').textContent = 'chargement du modèle…';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
+    video.srcObject = stream; await video.play();
+    const { FaceLandmarker, FilesetResolver } = await import(`${MP}/vision_bundle.mjs`);
+    const fileset = await FilesetResolver.forVisionTasks(`${MP}/wasm`);
+    const opts = (delegate) => ({
+      baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task', delegate },
+      runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true,
+    });
+    try { landmarker = await FaceLandmarker.createFromOptions(fileset, opts('GPU')); log('modèle chargé (GPU)'); }
+    catch (e){ landmarker = await FaceLandmarker.createFromOptions(fileset, opts('CPU')); log('modèle chargé (CPU, GPU indisponible)'); }
+    $('status').textContent = 'webcam active'; $('status').className = 'pill ok';
+    $('play').disabled = false; $('prev').disabled = false;
+    $('prompt').textContent = 'Bouge, cligne, ouvre la bouche. Puis lance la tournée.';
+  } catch (err){
+    $('status').textContent = 'webcam ou modèle indisponible'; $('status').className = 'pill bad'; $('start').disabled = false;
+    log(`erreur : ${err.name || ''} — ${err.message || err}. Le mode clavier (C, S, G) marche quand même.`);
+    $('play').disabled = false;
+  }
+};
+$('play').onclick = startTour;
+$('prev').onclick = () => { showPreview = !showPreview; pv.style.display = showPreview ? 'block' : 'none'; };
+log('tu peux tester sans caméra avec les touches C, S, G puis « Lancer la tournée »');
+</script>
+</body>
+</html>

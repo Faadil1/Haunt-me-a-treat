@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Haunt Me a Treat</title>
+<style>
+  :root{--bg:#0a0910;--panel:#14121b;--ink:#ece8f2;--mute:#8a8398;--acc:#c9b6ff;--ok:#7fd18b;--bad:#ff6b5e;--candy:#ffb35c}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+  #app{position:relative;width:100%;height:100%;overflow:hidden}
+  canvas.stage{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #riveCanvas{display:none}
+  .hud{position:absolute;left:16px;right:16px;bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;pointer-events:none}
+  .hud>*{pointer-events:auto}
+  button,.file{background:#221e2cdd;color:var(--ink);border:1px solid #3a3348;border-radius:10px;padding:10px 16px;font:inherit;cursor:pointer;backdrop-filter:blur(6px)}
+  button.primary{background:var(--acc);color:#120d1c;border-color:var(--acc);font-weight:700}
+  button:disabled{opacity:.45;cursor:default}
+  .file input{display:none}
+  .hold{user-select:none;-webkit-user-select:none;touch-action:none}
+  #prompt{position:absolute;top:22px;left:0;right:0;text-align:center;font-size:clamp(18px,3vw,28px);font-weight:800;text-shadow:0 2px 12px #000;padding:0 16px}
+  #sub{position:absolute;top:64px;left:0;right:0;text-align:center;color:var(--candy);font-size:16px;text-shadow:0 2px 8px #000}
+  #cal{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#0a0910cc;flex-direction:column;gap:14px;text-align:center;padding:16px}
+  #cal .ring{width:120px;height:120px;border-radius:50%;background:conic-gradient(var(--acc) var(--p,0%),#2a2436 0)}
+  #debug{position:absolute;top:12px;right:12px;width:290px;max-height:calc(100% - 100px);overflow:auto;background:#14121bee;border:1px solid #2a2436;border-radius:12px;padding:12px;display:none;font-size:12px}
+  #debug h3{margin:8px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute)}
+  .lbl{display:flex;justify-content:space-between;color:var(--mute)}
+  .bar{height:7px;background:#0d0b12;border-radius:4px;overflow:hidden;margin:2px 0 6px}
+  .bar>i{display:block;height:100%;width:0;background:var(--acc)}
+  .log{font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;max-height:160px;overflow:auto;background:#0d0b12;border-radius:6px;padding:6px}
+  .ok{color:var(--ok)}.bad{color:var(--bad)}
+  #privacy{position:absolute;left:16px;top:16px;font-size:12px;color:var(--mute);max-width:260px}
+  video{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="previewCanvas" class="stage"></canvas>
+  <canvas id="riveCanvas" class="stage"></canvas>
+  <div id="prompt">Mets le drap. Ton visage le fait vivre.</div>
+  <div id="sub"></div>
+  <div id="privacy">La webcam reste dans ton navigateur : aucune image n'est envoyée ni enregistrée.</div>
+
+  <div id="cal">
+    <div class="ring" id="ring"></div>
+    <div style="font-size:22px;font-weight:800">Le drap tombe sur toi…</div>
+    <div style="color:var(--mute)">Regarde l'écran, visage neutre, ne bouge pas.</div>
+  </div>
+
+  <div class="hud">
+    <button id="camBtn" class="primary">Enfiler le drap (webcam)</button>
+    <button id="tourBtn">Commencer la tournée</button>
+    <button class="hold" data-key="c">Crier</button>
+    <button class="hold" data-key="s">Sourire</button>
+    <button class="hold" data-key="g">Grimacer</button>
+    <label class="file">Charger un .riv<input id="rivFile" type="file" accept=".riv"></label>
+    <button id="dbgBtn">Debug (D)</button>
+  </div>
+
+  <div id="debug">
+    <h3>Signaux normalisés envoyés à Rive</h3>
+    <div id="bars"></div>
+    <div class="lbl"><span>Analyse / s</span><span id="fps">—</span></div>
+    <div class="lbl"><span>Visage</span><span id="present">—</span></div>
+    <div class="lbl"><span>Mode</span><span id="mode">aperçu (sans .riv)</span></div>
+    <h3>Contrat Rive</h3>
+    <label class="lbl" style="gap:6px;align-items:center">State Machine <input id="smName" value="State Machine 1" style="width:130px;background:#0d0b12;color:var(--ink);border:1px solid #3a3348;border-radius:6px;padding:3px 6px"></label>
+    <div id="contract" class="log">Aucun fichier .riv chargé.</div>
+    <h3>Journal</h3>
+    <div id="log" class="log"></div>
+  </div>
+  <video id="video" playsinline muted></video>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@rive-app/webgl2@2.44.2/rive.js"></script>
+<!-- script classique (pas type=module) : fonctionne aussi en ouvrant le fichier directement -->
+<script src="./bridge.js"></script>
+</body>
+</html>

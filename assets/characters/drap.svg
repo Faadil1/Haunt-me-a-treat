@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Le drap (le joueur). Trait encré façon Open Peeps. Pièces nommées pour le rig Rive :
+     drap_corps (mesh principal), drap_ourlet (bas qui ondule), plis, trou_oeil_G/D (hauteur = clignement),
+     pupille_G/D (regard), bouche (creux du tissu : ouverte/sourire), sac (sac à bonbons). -->
+<svg width="600px" height="820px" viewBox="0 0 600 820" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <title>drap</title>
+  <g id="drap" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
+    <g id="ombre">
+      <ellipse cx="300" cy="790" rx="190" ry="20" fill="#000000" opacity="0.28"/>
+    </g>
+    <g id="drap_corps">
+      <path d="M300,62 C392,60 466,128 482,232 C494,312 488,392 494,474 C500,556 518,634 534,700
+               C516,708 498,700 482,692 C470,712 450,724 428,716 C414,738 388,744 368,730
+               C352,750 324,754 304,738 C286,756 258,754 242,734 C222,748 196,742 182,722
+               C160,730 140,720 128,700 C110,708 88,708 70,698 C86,632 104,554 108,472
+               C112,390 106,310 118,232 C134,128 208,64 300,62 Z"
+            fill="#FFFFFF" stroke="#000000" stroke-width="7"/>
+    </g>
+    <g id="plis" stroke="#000000" stroke-width="5">
+      <path d="M188,402 C176,488 172,584 182,700"/>
+      <path d="M262,470 C258,548 256,624 262,718" opacity="0.9"/>
+      <path d="M352,476 C356,552 360,630 366,712" opacity="0.9"/>
+      <path d="M420,396 C432,482 438,584 428,694"/>
+      <path d="M150,262 C162,236 178,218 196,206" stroke-width="4" opacity="0.6"/>
+    </g>
+    <g id="drap_ourlet" stroke="#000000" stroke-width="4" opacity="0.55">
+      <path d="M84,676 C140,690 220,700 300,702 C380,700 460,690 518,676"/>
+    </g>
+    <g id="trou_oeil_G">
+      <path d="M196,214 C222,196 258,206 264,240 C270,276 248,304 222,302 C194,300 178,268 182,242 C184,230 188,220 196,214 Z"
+            fill="#0B0910" stroke="#000000" stroke-width="6"/>
+    </g>
+    <g id="trou_oeil_D">
+      <path d="M338,240 C344,206 380,196 406,214 C414,220 418,230 420,242 C424,268 408,300 380,302 C354,304 332,276 338,240 Z"
+            fill="#0B0910" stroke="#000000" stroke-width="6"/>
+    </g>
+    <g id="pupille_G" fill="#FFFFFF">
+      <circle cx="228" cy="248" r="13" fill="#F4EFE6"/>
+      <circle cx="233" cy="243" r="4" fill="#FFFFFF"/>
+    </g>
+    <g id="pupille_D" fill="#FFFFFF">
+      <circle cx="374" cy="248" r="13" fill="#F4EFE6"/>
+      <circle cx="379" cy="243" r="4" fill="#FFFFFF"/>
+    </g>
+    <g id="bouche">
+      <g id="bouche_fermee" stroke="#000000" stroke-width="6">
+        <path d="M262,360 C284,370 318,370 340,360"/>
+      </g>
+      <g id="bouche_ouverte" opacity="0">
+        <path d="M300,336 C336,336 352,370 350,404 C348,440 326,462 300,462 C274,462 252,440 250,404 C248,370 264,336 300,336 Z"
+              fill="#0B0910" stroke="#000000" stroke-width="6"/>
+      </g>
+      <g id="bouche_sourire" opacity="0">
+        <path d="M244,350 C270,392 330,392 356,350" stroke="#000000" stroke-width="7"/>
+        <path d="M236,344 C240,350 246,352 250,350" stroke="#000000" stroke-width="5"/>
+        <path d="M350,350 C354,352 360,350 364,344" stroke="#000000" stroke-width="5"/>
+      </g>
+    </g>
+    <g id="sac">
+      <path d="M454,560 C452,530 470,512 494,512 C518,512 534,530 532,560" stroke="#000000" stroke-width="6"/>
+      <path d="M440,566 L548,566 L540,668 C538,684 526,694 510,694 L478,694 C462,694 450,684 448,668 Z"
+            fill="#F7A23B" stroke="#000000" stroke-width="7"/>
+      <path d="M466,604 C474,598 484,598 490,606 M502,606 C508,598 518,598 524,604 M470,640 C484,654 506,654 520,640"
+            stroke="#000000" stroke-width="6"/>
+    </g>
+  </g>
+</svg>
