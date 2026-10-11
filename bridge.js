@@ -252,6 +252,8 @@
         vmi = r.viewModelInstance;
         document.querySelector('.hud').classList.add('compact');
         $('privacy').style.display = 'none';
+        // la consigne vient maintenant de Rive (bannière en haut) : on efface le texte de la page
+        if (vmi){ $('prompt').textContent = ''; $('sub').textContent = ''; }
         bindContract(label);
         log(`State Machine : ${sm || 'aucune'} · GPU Canvas ${OPT.gpu ? 'activé' : 'COUPÉ'} · envoi des valeurs ${OPT.push ? (OPT.only ? 'seulement ' + OPT.only.join(', ') : 'activé') : 'COUPÉ'}`);
       },
