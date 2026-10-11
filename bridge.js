@@ -202,14 +202,40 @@
   const bound = { numbers: {}, booleans: {}, triggersIn: {} };
   const lastSent = {};
 
-  async function loadRiv(buffer, label){
+  // Chargement en deux temps : 1) sonde le fichier pour lire ses State Machines, 2) le relance avec la bonne.
+  function pickStateMachine(names){
+    const wanted = $('smName').value.trim();
+    if (wanted && names.includes(wanted)) return wanted;
+    const pick = names.find((n) => /tourn/i.test(n)) || names[0] || null;
+    if (wanted && pick && wanted !== pick) log(`State Machine « ${wanted} » absente du fichier, j'utilise « ${pick} »`);
+    if (pick) $('smName').value = pick;
+    return pick;
+  }
+
+  function loadRiv(buffer, label){
     if (!window.rive){ log('runtime Rive introuvable (pas de connexion ?)'); return; }
-    if (r){ r.cleanup(); r = null; }
+    if (r){ r.cleanup(); r = null; vmi = null; }
     const canvas = $('riveCanvas');
     canvas.style.display = 'block'; $('previewCanvas').style.display = 'none';
-    r = new rive.Rive({
+    const probe = new rive.Rive({
+      buffer: buffer.slice(0), canvas, autoplay: false,
+      enableGPUCanvas: OPT.gpu, useOffscreenRenderer: false,
+      onLoad: () => {
+        const names = probe.stateMachineNames || [];
+        probe.cleanup();
+        startRiv(buffer, label, pickStateMachine(names));
+      },
+      onLoadError: (e) => {
+        log(`erreur de chargement Rive : ${e && e.data || e}`);
+        canvas.style.display = 'none'; $('previewCanvas').style.display = 'block';
+      },
+    });
+  }
+
+  function startRiv(buffer, label, sm){
+    const canvas = $('riveCanvas');
+    const opts = {
       buffer, canvas,
-      stateMachines: $('smName').value.trim() || 'Tournee',
       autoplay: true, autoBind: true,
       enableGPUCanvas: OPT.gpu, useOffscreenRenderer: false,
       assetLoader: (asset, bytes) => {
@@ -222,23 +248,18 @@
       layout: new rive.Layout({ fit: rive.Fit.Contain, alignment: rive.Alignment.Center }),
       onLoad: () => {
         r.resizeDrawingSurfaceToCanvas();
-        const wanted = $('smName').value.trim() || 'Tournee';
-        const names = r.stateMachineNames || [];
-        if (names.length && !names.includes(wanted)){
-          log(`State Machine « ${wanted} » introuvable, je prends « ${names[0]} »`);
-          $('smName').value = names[0];
-          return loadRiv(buffer, label);
-        }
         vmi = r.viewModelInstance;
         bindContract(label);
-        log(`options : GPU Canvas ${OPT.gpu ? 'activé' : 'COUPÉ'}, envoi des valeurs ${OPT.push ? (OPT.only ? 'seulement ' + OPT.only.join(', ') : 'activé') : 'COUPÉ'}`);
+        log(`State Machine : ${sm || 'aucune'} · GPU Canvas ${OPT.gpu ? 'activé' : 'COUPÉ'} · envoi des valeurs ${OPT.push ? (OPT.only ? 'seulement ' + OPT.only.join(', ') : 'activé') : 'COUPÉ'}`);
       },
       onLoadError: (e) => log(`erreur de chargement Rive : ${e && e.data || e}`),
       onStateChange: (e) => {
         const states = (e && e.data || []).filter((x) => x && x !== 'Any State' && x !== 'Entry' && x !== 'Exit');
         if (states.length){ log(`état → ${states.join(', ')}`); $('mode').textContent = `Rive · ${states[states.length - 1]}`; }
       },
-    });
+    };
+    if (sm) opts.stateMachines = sm;
+    r = new rive.Rive(opts);
   }
   $('rivFile').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -262,7 +283,7 @@
       if (p) p.on(() => onRiveTrigger(k));
     }
     smInputs = {};
-    const sm = r.stateMachineNames && r.stateMachineNames[0];
+    const sm = $('smName').value.trim() || (r.stateMachineNames && r.stateMachineNames[0]);
     const inputs = (sm && r.stateMachineInputs(sm)) || [];
     for (const i of inputs) smInputs[i.name] = i;
     lines.push(inputs.length ? `Entrées de State Machine : ${inputs.map((i) => i.name).join(', ')}` : 'Entrées de State Machine : aucune (logique 100 % View Model)');
