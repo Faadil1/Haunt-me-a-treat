@@ -145,8 +145,24 @@
   }
 
   // ---------- la séquence ----------
-  const T = { A: 1.6, B: 4.6, D: 8.6, END: 10.2 };   // A miroir · B effacement · C l'enfant derrière toi · D flash
-  let t0 = 0, raf = 0, heart = false, stung = false;
+  // A miroir · R ton reflet ne te suit plus : il rejoue TON sourire de la porte 2 · B effacement · C l'enfant derrière toi · D flash
+  const T_SMILE = { A: 1.6, R: 4.9, B: 7.1, D: 10.5, END: 12.1 };
+  const T_PLAIN = { A: 1.6, R: 1.6, B: 4.6, D: 8.6, END: 10.2 };
+  let T = T_PLAIN;
+
+  // ---------- le sourire volé : quelques secondes de webcam enregistrées pendant que tu souris à l'enfant ----------
+  // (en mémoire seulement, effacées à chaque nouvelle partie, jamais envoyées ni enregistrées)
+  const smile = []; let smileTimer = 0;
+  function captureSmile(){
+    if (smileTimer || smile.length >= 45 || !webcamOn()) return;
+    smileTimer = setInterval(() => {
+      if (smile.length >= 45 || !webcamOn()){ clearInterval(smileTimer); smileTimer = 0; return; }
+      const v = H().video, c = document.createElement('canvas'); c.width = 320; c.height = Math.round(320 * v.videoHeight / v.videoWidth);
+      c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); smile.push(c);
+    }, 66);
+  }
+  function stopSmile(){ clearInterval(smileTimer); smileTimer = 0; }
+  let t0 = 0, raf = 0, heart = false, stung = false, smileSfx = false;
 
   // Résolution interne fixe (≤ 1280 px de large) : évite de réallouer le canvas à chaque image
   // (avec un zoom Windows à 125 %, innerWidth × devicePixelRatio n'est pas entier) et garde les filtres légers.
@@ -163,7 +179,7 @@
   }
   function draw(now){
     const t = (performance.now() - t0) / 1000;
-    const ph = t < T.A ? 'A miroir' : t < T.B ? 'B effacement' : t < T.D ? 'C derrière toi' : 'D flash';
+    const ph = t < T.A ? 'A miroir' : t < T.R ? 'R reflet (ton sourire)' : t < T.B ? 'B effacement' : t < T.D ? 'C derrière toi' : 'D flash';
     if (ph !== phaseLogged){ phaseLogged = ph; log('finale : ' + ph + (haveMask ? ' (silhouette)' : ' (sans silhouette)')); }
     fit();
     const L = layout();
@@ -175,12 +191,17 @@
     if (t < T.D){
       const fadeIn = Math.min(1, t / 0.8);
       g.save(); g.globalAlpha = fadeIn;
-      drawMirrored(H().video, L, 'grayscale(1) contrast(1.25) brightness(0.55)');
+      if (t >= T.A && t < T.R && smile.length > 4){
+        // ton reflet ne te copie plus : il te sourit, avec le sourire que tu as fait à l'enfant
+        const n = smile.length, f = Math.floor((t - T.A) * 15 * 0.65) % (2 * n - 2), i = f < n ? f : 2 * n - 2 - f;
+        drawMirrored(smile[i], L, 'grayscale(1) contrast(1.35) brightness(0.6)');
+        if (!smileSfx){ smileSfx = true; sfx('tension'); }
+      } else drawMirrored(H().video, L, 'grayscale(1) contrast(1.25) brightness(0.55)');
       g.restore();
       if (t >= T.B) drawKid(L, F, Math.min(0.92, (t - T.B) / 2.2), t);   // C : l'enfant apparaît derrière toi
-      if (t >= T.A && t < T.B){
+      if (t >= T.R && t < T.B){
         // B : tu t'effaces dans le noir ; deux yeux de fantôme restent
-        const k = Math.min(1, (t - T.A) / 1.2);
+        const k = Math.min(1, (t - T.R) / 1.2);
         if (haveMask) silhouette(L, '#000', k);
         else { g.save(); g.globalAlpha = k * 0.92; g.fillStyle = '#000'; g.beginPath(); g.ellipse(F.cx, F.cy, F.fh * 0.62, F.fh * 0.8, 0, 0, 7); g.fill(); g.restore(); }
         ghostEyes(F, k);
@@ -210,7 +231,8 @@
   function start(){
     if (!webcamOn()){ state.active = false; dispatchEvent(new Event('hmat:finale-done')); return; }
     log('finale : BEHIND YOU');
-    cv.style.display = 'block'; t0 = performance.now(); heart = stung = kidSideSet = false; phaseLogged = ''; errLogged = false;
+    T = smile.length > 4 ? T_SMILE : T_PLAIN; stopSmile();
+    cv.style.display = 'block'; t0 = performance.now(); heart = stung = kidSideSet = smileSfx = false; phaseLogged = ''; errLogged = false;
     raf = requestAnimationFrame(frame);
   }
   function stop(){
@@ -226,7 +248,9 @@
       if (/revel|reflet|vitre|twist/.test(s) && !state.active && webcamOn()){
         state.active = true; clearTimeout(timer); timer = setTimeout(start, DELAY);
       }
-      if (/enfiler|drap_tombe/.test(s) && state.active){ clearTimeout(timer); stop(); }
+      if (/enfiler|drap_tombe/.test(s)){ stopSmile(); smile.length = 0; if (state.active){ clearTimeout(timer); stop(); } }
+      if (/porte2_tient|porte2_bonbon/.test(s)) captureSmile();
+      else if (/porte3|pleure|ferme/.test(s)) stopSmile();
     }
   });
 
