@@ -95,16 +95,23 @@
       for (let i = 0; i < 6; i++) tone(t + 0.5 + i * 0.16, { f: 110, to: 60, a: 0.002, d: 0.08, vol: 0.4 * (1 - i / 7) }); },
     jeer(){ const t = ac.currentTime; if (playCustom('jeer')) return;
       [784, 659, 880, 784, 659].forEach((f, i) => tone(t + i * 0.18, { f, type: 'square', a: 0.01, d: 0.14, vol: 0.06 })); },
+    // La révélation : le monde se tait, un cœur bat, puis un souffle grave monte
+    reveal(){ const t = ac.currentTime;
+      if (ambGain){ ambGain.gain.setTargetAtTime(0.0001, t, 0.4); ambGain.gain.setTargetAtTime(0.06, t + 9, 2); }
+      for (let i = 0; i < 6; i++){ const b = t + 0.6 + i * 0.85; tone(b, { f: 62, to: 40, a: 0.004, d: 0.16, vol: 0.8 }); tone(b + 0.22, { f: 55, to: 38, a: 0.004, d: 0.2, vol: 0.55 }); }
+      noiseHit(t + 4.5, { f: 120, sweepTo: 3000, q: 0.7, a: 2.2, d: 0.4, vol: 0.35 });
+      tone(t + 4.5, { f: 55, type: 'sawtooth', a: 2.0, d: 3.5, vol: 0.12, vib: 2 }); },
     win(){ const t = ac.currentTime + 1.2; [523, 659, 784, 1046].forEach((f, i) => tone(t + i * 0.1, { f, type: 'triangle', a: 0.01, d: 0.6, vol: 0.12 })); },
   };
   const sfx = (n) => { if (audio() && ac.state === 'running') try { SFX[n](); } catch (e) { log('son : ' + e.message); } };
 
   // Ambiance : vent filtré qui respire + grillons
+  let ambGain = null;
   function startAmbience(){
     const s = ac.createBufferSource(); s.buffer = noise(); s.loop = true;
     const fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = 400; fl.Q.value = 0.6;
     const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 0.07; lg.gain.value = 220; l.connect(lg).connect(fl.frequency);
-    const g = ac.createGain(); g.gain.value = 0.06;
+    const g = ac.createGain(); g.gain.value = 0.06; ambGain = g;
     s.connect(fl).connect(g).connect(master); s.start(); l.start();
     const chirp = () => {
       if (!muted){ const t = ac.currentTime; for (let i = 0; i < 3; i++) tone(t + i * 0.07, { f: 4200 + Math.random() * 300, a: 0.005, d: 0.04, vol: 0.025 }); }
@@ -157,12 +164,13 @@
     for (const raw of e.detail){
       const s = String(raw).toLowerCase();
       const leave = () => { atDoor = false; };
-      if (/enfiler|drap_tombe/.test(s)){ sfx('whoosh'); leave(); Object.assign(game, { candies: 0, best: 0, bestFace: null, bestShot: null, outcome: null, scoreVoisin: 0, playing: true }); hideCard(); }
+      if (/enfiler|drap_tombe/.test(s)){ sfx('whoosh'); leave(); Object.assign(game, { candies: 0, best: 0, bestFace: null, bestShot: null, outcome: null, scoreVoisin: 0, playing: true, twist: false }); hideCard(); }
       else if (/bonbon|note/.test(s)){ sfx('candy'); if (atDoor) game.candies++; leave(); }
       else if (/ferme/.test(s)){ sfx('slam'); leave(); }
       else if (/pleure/.test(s)){ sfx('sob'); leave(); }
       else if (/gagne/.test(s)){ game.outcome = 'win'; sfx('scream'); sfx('win'); leave(); }
       else if (/perdu/.test(s)){ game.outcome = 'lose'; sfx('jeer'); if (atDoor) game.candies = Math.max(0, game.candies - 1); leave(); }
+      else if (/revel|reflet|vitre|twist/.test(s)){ game.twist = true; sfx('reveal'); leave(); }
       else if (/tient/.test(s)){ sfx('tension'); }
       else if (/carte/.test(s)){ leave(); if (game.playing) setTimeout(showCard, 600); game.playing = false; }
       else if (/arrivee|^porte[1-4]$|^fin$/.test(s)){
@@ -272,6 +280,10 @@
     g.font = '700 40px system-ui, sans-serif'; g.fillStyle = '#ece8f2';
     const line = game.outcome === 'win' ? 'Le petit monstre s’est enfui en hurlant.' : game.outcome === 'lose' ? 'Il est reparti avec un de mes bonbons…' : 'Tournée terminée.';
     g.fillText(line, W / 2, y0 + 70);
+    if (game.twist){
+      g.font = 'italic 600 34px system-ui, sans-serif'; g.fillStyle = '#7fd18b';
+      g.fillText('Il n\u2019y avait personne sous le drap.', W / 2, y0 + 185);
+    }
     g.font = '600 36px system-ui, sans-serif'; g.fillStyle = '#c9b6ff';
     g.fillText(`${'🍬'.repeat(Math.max(0, Math.min(6, candies | 0)))}  ${candies | 0} bonbon${(candies | 0) > 1 ? 's' : ''}${nScore != null ? `  ·  voisin : ${Math.round(nScore)}/10` : ''}`, W / 2, y0 + 130);
     g.font = '500 28px system-ui, sans-serif'; g.fillStyle = '#8a8398';
@@ -306,7 +318,7 @@
 
   // test sans Rive : ?demo=card affiche une carte d'exemple
   if (/[?&]demo=card/.test(location.search)) setTimeout(() => {
-    game.best = 0.87; game.outcome = 'win';
+    game.best = 0.87; game.outcome = 'win'; game.twist = /twist/.test(location.search);
     game.bestFace = { faceJaw: 0.95, faceSmile: 0, faceBrowDown: 1, faceBrowUp: 0, faceBlinkL: 0, faceBlinkR: 0.1, faceRoll: 6 };
     showCard();
   }, 500);
