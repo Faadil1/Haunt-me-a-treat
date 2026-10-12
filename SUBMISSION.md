@@ -1,5 +1,12 @@
 # Submission kit — Haunt Me a Treat
 
+Official requirements (rivehalloweenchallenge/guidelines): must use the Rive CLI, GPU Canvas, or both
+(both + Scripting/Data Binding/State Machines scores higher) · short description naming the features ·
+video of the project in action **showing the CLI agent workflow / RML and work in the Rive Editor** ·
+Rive link **or embedded URL** · new work · social post tagging @rive_app (X, LinkedIn or Instagram),
+30+ s walkthrough, #rivehalloweenchallenge.
+Judges: Adam Plouff (Battleaxe), Mayte CG (visual/motion/UI), Mike Sunday (storytelling @ Rive).
+
 > Lines marked **[IF]** are only true once that piece is in the exported file. Delete them otherwise.
 > Never claim something the judges can't see.
 
@@ -25,12 +32,12 @@ And then… don't look at your reflection. 🪞
 • **Data Binding**: 12 face values (jaw, smile, brows, blinks, gaze, head pose, a combined scare score) stream into a Rive View Model every frame. MediaPipe reads your face locally; a 2.5 s neutral calibration adapts every threshold to *your* face.
 • **Luau scripting** for the game counters **[IF]** and the shader driver.
 • **[IF] GPU Canvas (WGSL)**: one custom shader paints the night — a porch lamp that flickers harder the scarier you are, moonlight dust, mist that parts around the sheet, and a blood-red reveal driven by the State Machine.
-• **[IF] Rive CLI** to publish the playable link.
+• **[IF] Rive CLI + RML**: an agent wrote [component] in RML with the CLI's live preview, `rive --screenshot`/`--data` to test door states headless, then I refined it by hand in the Editor.
 • Night porches rendered in Blender; characters from Open Peeps (CC0), rigged and animated by hand in Rive.
 • The webcam never leaves your browser. Nothing is uploaded or stored.
 
-▶️ Play with your face: https://faadil1.github.io/Haunt-me-a-treat/
-▶️ Play with your mouse (Rive link): **[PASTE rive.to LINK]**
+▶️ Play (webcam, or mouse/keyboard if you have no camera): https://faadil1.github.io/Haunt-me-a-treat/
+▶️ [IF] Rive link: **[PASTE]**
 🎬 Process video: **[PASTE]**
 
 Best with headphones. ⚠️ Jump scares & flashing lights.

@@ -52,8 +52,13 @@
 
   /* ---------- habillage joueur (ui.js) ---------- */
   body:not(.dev) .hud, body:not(.dev) #privacy, body:not(.dev) #debug{display:none!important}
-  body.mouse.norive:not(.dev) .hud{display:flex!important}
-  body.mouse.norive:not(.dev) .hud > :not(.hold){display:none}
+  body.mouse:not(.dev) .hud{display:flex!important;bottom:22px;gap:14px}
+  body.mouse:not(.dev) .hud > :not(.hold){display:none}
+  body.mouse .hud .hold{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:120px;padding:10px 18px;border-radius:16px;background:#14121bdd;border:1px solid #c9b6ff66}
+  body.mouse .hud .hold small{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8a8398}
+  body.mouse .hud .hold b{font-size:16px;letter-spacing:.04em}
+  body.mouse .hud .hold kbd{font:600 10px ui-monospace,monospace;color:#c9b6ff;opacity:.8}
+  body.mouse .hud .hold:active{background:#c9b6ff;color:#0b0910;transform:scale(.97)}
   #intro{position:absolute;inset:0;z-index:40;background:radial-gradient(ellipse at 50% 30%,#1a1430 0%,#05040a 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:24px;text-align:center;transition:opacity .7s}
   #intro.gone{opacity:0;pointer-events:none}
   #intro .moon{position:absolute;top:9%;right:14%;width:min(14vw,110px);aspect-ratio:1;border-radius:50%;background:#f3eedd;box-shadow:0 0 80px 20px #f3eedd33;opacity:.85}

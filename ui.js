@@ -85,7 +85,13 @@
     document.body.classList.add('mouse');
     if (!(H() && H().vmi)) document.body.classList.add('norive');
     showMini();
-    if (H() && !H().vmi && $('tourBtn')) setTimeout(() => $('tourBtn').click(), 300);   // aperçu sans .riv
+    // Sans webcam : les boutons « maintenir » écrivent les mêmes valeurs dans le View Model que ton visage,
+    // donc la State Machine Rive se joue telle quelle. On lance la tournée (trigger calibrated).
+    document.querySelectorAll('.hold').forEach((b) => {
+      const k = b.dataset.key, label = { c: 'SHOUT', s: 'SMILE', g: 'SCARY FACE' }[k];
+      if (label) b.innerHTML = `<small>hold</small><b>${label}</b><kbd>${k.toUpperCase()}</kbd>`;
+    });
+    if ($('tourBtn')) setTimeout(() => $('tourBtn').click(), 400);
   }
   function afterCam(){ document.body.classList.add('cam'); showMini(); if (pipWanted) pip.classList.add('on'); }
   $('startBtn') && ($('startBtn').onclick = begin);
