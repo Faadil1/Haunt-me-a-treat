@@ -274,6 +274,22 @@
   };
   addEventListener('resize', () => r && r.resizeDrawingSurfaceToCanvas());
 
+  // Version hébergée (https) : charge automatiquement le jeu. En file://, le navigateur bloque fetch :
+  // on garde alors le bouton « Charger un .riv ». ?riv=0 désactive, ?riv=autre.riv change de fichier.
+  (async () => {
+    const want = new URLSearchParams(location.search).get('riv');
+    if (want === '0' || !/^https?:/.test(location.protocol)) return;
+    const url = want || 'assets/rive/haunt.riv';
+    try {
+      const res = await fetch(url, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(res.status);
+      log(`chargement automatique de ${url}`);
+      const buf = await res.arrayBuffer();
+      const go = () => window.rive ? loadRiv(buf, url) : setTimeout(go, 100);
+      go();
+    } catch (err){ log(`pas de ${url} (${err.message}) : utilise « Charger un .riv »`); }
+  })();
+
   function bindContract(label){
     const lines = [`Fichier : ${label}`, `State Machines : ${(r.stateMachineNames || []).join(', ') || '—'}`];
     if (!vmi){
