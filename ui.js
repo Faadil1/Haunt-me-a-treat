@@ -91,6 +91,9 @@
       const k = b.dataset.key, label = { c: 'SHOUT', s: 'SMILE', g: 'SCARY FACE' }[k];
       if (label) b.innerHTML = `<small>hold</small><b>${label}</b><kbd>${k.toUpperCase()}</kbd>`;
     });
+    // La page pilote (boutons) : on le signale à Rive comme le mode webcam, pour couper les indices et
+    // les listeners souris propres au lien Rive public (sinon deux consignes contradictoires à l'écran).
+    if (H()) H().out.webcamMode = true;
     if ($('tourBtn')) setTimeout(() => $('tourBtn').click(), 400);
   }
   function afterCam(){ document.body.classList.add('cam'); showMini(); if (pipWanted) pip.classList.add('on'); }
