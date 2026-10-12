@@ -111,7 +111,7 @@
   let landmarker = null, lastVideoT = -1, frames = 0;
 
   async function startCamera(){
-    $('camBtn').disabled = true; $('camBtn').textContent = 'Chargement…';
+    $('camBtn').disabled = true; $('camBtn').textContent = 'Loading…';
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: false });
       video.srcObject = stream; await video.play();
@@ -122,14 +122,14 @@
       catch { landmarker = await FaceLandmarker.createFromOptions(fileset, opts('CPU')); log('MediaPipe chargé (CPU)'); }
       out.webcamMode = true;
       document.querySelector('.hud').classList.add('cam');
-      $('camBtn').textContent = 'Recalibrer';
+      $('camBtn').textContent = 'Recalibrate';
       $('camBtn').disabled = false;
       $('camBtn').onclick = calibrate;
       calibrate();
     } catch (err){
       log(`webcam indisponible : ${err.name || ''} ${err.message || err} — le mode boutons/clavier reste disponible`);
-      $('camBtn').textContent = 'Webcam indisponible'; $('camBtn').disabled = true;
-      $('prompt').textContent = 'Pas de webcam ? Utilise les boutons Crier, Sourire, Grimacer.';
+      $('camBtn').textContent = 'Webcam unavailable'; $('camBtn').disabled = true;
+      $('prompt').textContent = 'No webcam? Use the Shout, Smile and Scare face buttons.';
     }
   }
   $('camBtn').onclick = startCamera;
@@ -193,7 +193,7 @@
       $('cal').style.display = 'none';
       log('calibrage OK — neutre : ' + RAW_KEYS.map((k) => `${k}=${cal.base[k].toFixed(2)}`).join(' '));
       fireIn('calibrated');
-      $('prompt').textContent = vmi ? '' : 'Le drap est sur toi. Bouge, cligne, fais des grimaces.';
+      $('prompt').textContent = vmi ? '' : 'The sheet is on you. Move, blink, pull faces.';
     };
     requestAnimationFrame(tick);
   }
@@ -361,11 +361,11 @@
   // Seuils = conditions de transition à recopier dans Rive (sur les valeurs 0 → 1)
   const THRESH = { shout: 0.6, smile: 0.6, smileMaxJaw: 0.4, scareKid: 0.7, grimace: 0.6, kidFlee: 0.7, hold: 0.5 };
   const DOORS = [
-    { who: 'La mamie sourde', ask: 'CRIE « Trick or treat ! »', ok: () => out.faceJaw > THRESH.shout },
-    { who: "L'enfant peureux", ask: 'Souris-lui (bouche fermée)', ok: () => out.faceSmile > THRESH.smile && out.faceJaw < THRESH.smileMaxJaw,
-      fail: () => out.faceScary > THRESH.scareKid, failMsg: "Tu lui as fait peur. Il pleure, pas de bonbon." },
-    { who: 'Le voisin blasé', ask: 'Ta grimace LA PLUS EFFRAYANTE', ok: () => out.faceScary > THRESH.grimace, score: true },
-    { who: 'Un enfant déguisé frappe chez TOI', ask: 'Fais-lui peur pour garder ton sac !', ok: () => out.faceScary > THRESH.kidFlee, final: true },
+    { who: 'The deaf granny', ask: 'SHOUT “Trick or treat!”', ok: () => out.faceJaw > THRESH.shout },
+    { who: 'The scared kid', ask: 'Smile at him (mouth closed)', ok: () => out.faceSmile > THRESH.smile && out.faceJaw < THRESH.smileMaxJaw,
+      fail: () => out.faceScary > THRESH.scareKid, failMsg: 'You scared him. He cries. No candy.' },
+    { who: 'The unimpressed neighbor', ask: 'Your SCARIEST face', ok: () => out.faceScary > THRESH.grimace, score: true },
+    { who: 'A kid in costume knocks on YOUR door', ask: 'Scare him to keep your bag!', ok: () => out.faceScary > THRESH.kidFlee, final: true },
   ];
   const tour = { i: -1, hold: 0, t: 0, candies: 0, waiting: false, best: 0 };
   $('tourBtn').onclick = () => {
@@ -393,14 +393,14 @@
     if (d.fail && tour.t > 0.8 && d.fail()) return endDoor(d.failMsg);
     tour.hold = d.ok() ? tour.hold + dt : Math.max(0, tour.hold - dt * 2);
     if (tour.hold > THRESH.hold){
-      if (d.final){ tour.i = DOORS.length; $('prompt').textContent = `Il s'enfuit en hurlant. Ton sac est sauf : ${tour.candies} bonbons.`;
-        $('sub').textContent = `Ta pire grimace de la nuit : ${Math.round(tour.best * 100)} / 100`; captureCard(); return; }
+      if (d.final){ tour.i = DOORS.length; $('prompt').textContent = `He runs off screaming. Your bag is safe: ${tour.candies} candies.`;
+        $('sub').textContent = `Your scariest face tonight: ${Math.round(tour.best * 100)} / 100`; captureCard(); return; }
       tour.candies++;
-      return endDoor(d.score ? `${d.who} : « ${Math.max(5, Math.round(out.faceScary * 10))}/10. » Un bonbon !` : `${d.who} te donne un bonbon !`, 1300);
+      return endDoor(d.score ? `${d.who}: “${Math.max(5, Math.round(out.faceScary * 10))}/10.” One candy!` : `${d.who} gives you a candy!`, 1300);
     }
     if (tour.t > 12){
-      if (d.final){ tour.candies = Math.max(0, tour.candies - 1); tour.i = DOORS.length; $('prompt').textContent = `Il repart avec un de tes bonbons… Il t'en reste ${tour.candies}.`; return; }
-      endDoor('La porte se referme…', 1200);
+      if (d.final){ tour.candies = Math.max(0, tour.candies - 1); tour.i = DOORS.length; $('prompt').textContent = `He walks off with one of your candies… ${tour.candies} left.`; return; }
+      endDoor('The door closes…', 1200);
     }
   }
 

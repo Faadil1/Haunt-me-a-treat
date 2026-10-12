@@ -13,6 +13,9 @@ Un shader WGSL et un script Luau qui ajoutent l'atmosphère de nuit, **pilotée 
 | Devant (`layer = 1`) | brume au sol qui dérive et **s'écarte autour du drap** | `faceHeadX/Y` |
 | | la brume s'agite | `faceScary` |
 | | vignettage léger | — |
+| Révélation (`horror` 0 → 1) | toutes les lumières s'éteignent, la lampe vire au rouge et meurt | `horror` |
+| | une flaque de sang s'étale sous le drap, du sang coule du haut de l'écran | `horror` |
+| | vignettage rouge qui bat comme un cœur (le même rythme que le son) | `horror` |
 
 ## Fichiers
 
@@ -42,8 +45,9 @@ Phase 6 : GPU Canvas. Lis shaders/README.md, shaders/NuitFX.wgsl et shaders/Nuit
 3. Place deux instances dans l'artboard Main, à l'origine de l'artboard, couvrant 1920 × 1080 :
    - NuitFX_Derriere, layer = 0, juste au-dessus de Decor (sous Habitants et Drap)
    - NuitFX_Devant, layer = 1, tout en haut (au-dessus de Drap)
-4. Lie les entrées des deux instances au View Model Costume : scary ← faceScary,
-   headX ← faceHeadX, headY ← faceHeadY, door ← doorIndex.
+4. Ajoute au View Model Costume un nombre `horror` (défaut 0). Lie les entrées des deux instances :
+   scary ← faceScary, headX ← faceHeadX, headY ← faceHeadY, door ← doorIndex, horror ← horror.
+   Dans l'état Revelation, anime `horror` de 0 à 1 en ~4 s (il redescend à 0 dans Enfiler).
    Vérifie que doorIndex vaut 1, 2, 3, 4 à l'entrée de Porte1, Porte2, Porte3, Fin et 0 dans Attente,
    Enfiler et Carte. Ajoute-le dans la State Machine si ce n'est pas le cas.
 5. Règle ghostX / ghostY sur le centre de repos du drap, en UV (x / 1920, y / 1080).

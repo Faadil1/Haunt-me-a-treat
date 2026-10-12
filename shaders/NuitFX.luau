@@ -6,7 +6,7 @@
 --   NuitFX_Devant   (layer = 1) : au-dessus de Drap          → brume au sol, vignettage
 --
 -- Entrées à lier au View Model `Costume` (clic droit sur l'entrée → Data Bind) :
---   scary ← faceScary, headX ← faceHeadX, headY ← faceHeadY, door ← doorIndex
+--   scary ← faceScary, headX ← faceHeadX, headY ← faceHeadY, door ← doorIndex, horror ← horror
 --
 -- Si le GPU Canvas n'est pas disponible (ancien runtime, aperçu), le script ne dessine rien :
 -- le jeu reste jouable.
@@ -23,6 +23,7 @@ type NuitFX = {
   ghostX: Input<number>,     -- position de repos du centre du drap, en UV (0 → 1)
   ghostY: Input<number>,
   flipY: Input<number>,      -- passe à 1 si la brume apparaît en haut au lieu d'en bas
+  horror: Input<number>,     -- horror (0 → 1) : la révélation (sang, lampe rouge, battement)
 
   canvas: GPUCanvas?,
   pipeline: GPUPipeline?,
@@ -111,7 +112,7 @@ local function writeUniforms(self: NuitFX)
   buffer.writef32(d, 28, lp[2])
   buffer.writef32(d, 32, W / H)
   buffer.writef32(d, 36, self.flipY)
-  buffer.writef32(d, 40, 0)
+  buffer.writef32(d, 40, math.clamp(self.horror, 0, 1))
   buffer.writef32(d, 44, 0)
 end
 
@@ -147,6 +148,7 @@ return function(): Node<NuitFX>
     ghostX = 0.5,
     ghostY = 0.75,
     flipY = 0,
+    horror = 0,
 
     canvas = nil,
     pipeline = nil,

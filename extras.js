@@ -226,7 +226,7 @@
   document.head.appendChild(css);
   const card = document.createElement('div'); card.id = 'card';
   card.innerHTML = `<div class="wrap"><canvas id="cardCanvas" width="1080" height="1350"></canvas>
-    <div class="row"><button id="cardSave" class="primary">Télécharger ma carte</button><button id="cardShare">Partager</button><button id="cardAgain">Rejouer</button><button id="cardClose">Fermer</button></div></div>`;
+    <div class="row"><button id="cardSave" class="primary">Download my card</button><button id="cardShare">Share</button><button id="cardAgain">Play again</button><button id="cardClose">Close</button></div></div>`;
   ($('app') || document.body).appendChild(card);
 
   const bg = new Image(); bg.src = 'assets/backgrounds_jpg/porch_4_chezmoi.jpg';
@@ -274,20 +274,20 @@
     // textes
     g.textAlign = 'center'; g.fillStyle = '#ece8f2';
     g.font = '800 64px system-ui, sans-serif'; g.fillText('HAUNT ME A TREAT', W / 2, 110);
-    g.font = '500 30px system-ui, sans-serif'; g.fillStyle = '#c9b6ff'; g.fillText('ma pire grimace de la nuit', W / 2, 158);
+    g.font = '500 30px system-ui, sans-serif'; g.fillStyle = '#c9b6ff'; g.fillText('my scariest face tonight', W / 2, 158);
     const y0 = 1080;
     g.font = '900 120px system-ui, sans-serif'; g.fillStyle = '#ffb35c'; g.fillText(`${grim}/100`, W / 2, y0);
     g.font = '700 40px system-ui, sans-serif'; g.fillStyle = '#ece8f2';
-    const line = game.outcome === 'win' ? 'Le petit monstre s’est enfui en hurlant.' : game.outcome === 'lose' ? 'Il est reparti avec un de mes bonbons…' : 'Tournée terminée.';
+    const line = game.outcome === 'win' ? 'The little monster ran off screaming.' : game.outcome === 'lose' ? 'He walked off with one of my candies…' : 'Trick-or-treat night is over.';
     g.fillText(line, W / 2, y0 + 70);
     if (game.twist){
       g.font = 'italic 600 34px system-ui, sans-serif'; g.fillStyle = '#7fd18b';
-      g.fillText('Il n\u2019y avait personne sous le drap.', W / 2, y0 + 185);
+      g.fillText('There was no one under the sheet.', W / 2, y0 + 185);
     }
     g.font = '600 36px system-ui, sans-serif'; g.fillStyle = '#c9b6ff';
-    g.fillText(`${'🍬'.repeat(Math.max(0, Math.min(6, candies | 0)))}  ${candies | 0} bonbon${(candies | 0) > 1 ? 's' : ''}${nScore != null ? `  ·  voisin : ${Math.round(nScore)}/10` : ''}`, W / 2, y0 + 130);
+    g.fillText(`${'🍬'.repeat(Math.max(0, Math.min(6, candies | 0)))}  ${candies | 0} cand${(candies | 0) === 1 ? 'y' : 'ies'}${nScore != null ? `  ·  neighbor: ${Math.round(nScore)}/10` : ''}`, W / 2, y0 + 130);
     g.font = '500 28px system-ui, sans-serif'; g.fillStyle = '#8a8398';
-    g.fillText('Mon vrai visage pilotait le fantôme · fait avec @rive_app', W / 2, Hh - 40);
+    g.fillText('My real face was driving the ghost · made with @rive_app', W / 2, Hh - 40);
   }
 
   function showCard(){ renderCard(); card.style.display = 'flex'; log('carte souvenir affichée'); }
@@ -300,17 +300,17 @@
   }, 'image/png');
   $('cardShare').onclick = () => $('cardCanvas').toBlob(async (b) => {
     const file = new File([b], 'haunt-me-a-treat.png', { type: 'image/png' });
-    const text = `Mon visage a hanté le quartier : ${Math.round(game.best * 100)}/100 de grimace. Haunt Me a Treat, fait avec @rive_app #RiveHalloweenChallenge`;
+    const text = `My real face haunted the whole street: ${Math.round(game.best * 100)}/100 scare score. Haunt Me a Treat, made with @rive_app #RiveHalloweenChallenge`;
     try {
       if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text, url: location.href.split('?')[0] });
-      else { await navigator.clipboard.writeText(text + ' ' + location.href.split('?')[0]); $('cardShare').textContent = 'Texte copié !'; }
+      else { await navigator.clipboard.writeText(text + ' ' + location.href.split('?')[0]); $('cardShare').textContent = 'Text copied!'; }
     } catch {}
   }, 'image/png');
 
   // bouton son (touche M)
   const hud = document.querySelector('.hud');
   if (hud){
-    const mb = document.createElement('button'); mb.id = 'muteBtn'; mb.title = 'Son (M)'; mb.textContent = '🔊';
+    const mb = document.createElement('button'); mb.id = 'muteBtn'; mb.title = 'Sound (M)'; mb.textContent = '🔊';
     const toggle = () => { muted = !muted; mb.textContent = muted ? '🔇' : '🔊'; if (master) master.gain.setTargetAtTime(muted ? 0 : 0.8, ac.currentTime, 0.05); };
     mb.onclick = toggle; hud.insertBefore(mb, $('dbgBtn'));
     addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'm') toggle(); });
