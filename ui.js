@@ -1,0 +1,195 @@
+// ui.js — l'habillage joueur : ouverture cinématique, chargement, mini-barre, miroir, « How it's made ».
+// Les boutons de développement (Load a .riv, Debug, Shout/Smile…) restent accessibles avec ?dev=1,
+// et automatiquement quand la page est ouverte en local (file://).
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const H = () => window.HMAT;
+  const Q = new URLSearchParams(location.search);
+  const DEV = Q.get('dev') === '1' || location.protocol === 'file:';
+  const SKIP_INTRO = Q.get('intro') === '0' || Q.has('demo') || DEV;
+  const app = $('app');
+  document.body.classList.toggle('dev', DEV);
+
+  const el = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; };
+
+  // ===================================================================
+  // 1. Ouverture
+  // ===================================================================
+  const intro = el(`
+  <div id="intro">
+    <div class="moon"></div>
+    <div class="lines"><p id="l1"></p><p id="l2"></p><p id="l3"></p></div>
+    <div class="cta">
+      <h1>HAUNT ME A TREAT</h1>
+      <button id="startBtn" class="big">Put on the sheet</button>
+      <div class="alt"><a href="#" id="mouseLink">No webcam? Play with your mouse</a> · <a href="#" id="aboutLink">How it's made</a></div>
+      <div class="notes">🎧 best with headphones · ⚠ jump scares &amp; flashing lights · 🔒 your webcam never leaves your browser</div>
+    </div>
+  </div>`);
+  app.appendChild(intro);
+
+  const LINES = [['l1', "It's Halloween night."], ['l2', 'You have no costume.'], ['l3', '…but you have a face.']];
+  async function type(){
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    await wait(500);
+    for (const [id, txt] of LINES){
+      const p = $(id);
+      for (let i = 1; i <= txt.length; i++){ p.textContent = txt.slice(0, i); await wait(id === 'l3' ? 70 : 45); }
+      await wait(id === 'l3' ? 500 : 650);
+    }
+    intro.classList.add('ready');
+  }
+  if (SKIP_INTRO) intro.remove(); else type();
+  intro.addEventListener('click', (e) => { if (!intro.classList.contains('ready') && e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON'){ LINES.forEach(([id, t]) => $(id).textContent = t); intro.classList.add('ready'); } });
+
+  // ===================================================================
+  // 5. Chargement (webcam + modèle de visage ~10 Mo)
+  // ===================================================================
+  const loading = el(`
+  <div id="loading">
+    <div class="sheet">
+      <svg viewBox="0 0 120 150" width="110"><path d="M10 70 C10 25 35 5 60 5 C85 5 110 25 110 70 L110 140 L95 128 L80 142 L65 128 L50 142 L35 128 L20 142 L10 130 Z" fill="#efeaf3"/>
+      <ellipse cx="42" cy="58" rx="9" ry="12" fill="#0b0910"/><ellipse cx="78" cy="58" rx="9" ry="12" fill="#0b0910"/></svg>
+    </div>
+    <div id="loadMsg">Asking to see your face…</div>
+    <div class="bar"><i></i></div>
+    <div id="loadHint">Allow the camera when your browser asks.</div>
+  </div>`);
+  app.appendChild(loading);
+
+  function begin(){
+    intro.classList.add('gone'); setTimeout(() => intro.remove(), 700);
+    loading.classList.add('on');
+    if ($('camBtn')) $('camBtn').click();
+    const t0 = performance.now();
+    const tick = () => {
+      const v = H() && H().video, btn = $('camBtn');
+      if (btn && /unavailable/i.test(btn.textContent)){ loading.classList.remove('on'); noCam(); return; }
+      if ($('cal') && getComputedStyle($('cal')).display !== 'none'){ loading.classList.remove('on'); afterCam(); return; }
+      if (v && v.srcObject){ $('loadMsg').textContent = 'Sewing your sheet…'; $('loadHint').textContent = 'Loading face tracking (about 10 MB, once).'; }
+      if (performance.now() - t0 > 45000){ $('loadHint').textContent = 'Still loading… slow connection? You can also play with your mouse.'; }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  }
+  function noCam(){
+    const m = el(`<div id="nocam"><p>No camera found, or access was denied.</p>
+      <button id="nocamMouse" class="big">Play with your mouse</button>
+      <p class="small">To use your face: allow the camera in the address bar, then reload.</p></div>`);
+    app.appendChild(m);
+    $('nocamMouse').onclick = () => { m.remove(); mouseMode(); };
+  }
+  function mouseMode(){
+    if (intro.isConnected){ intro.classList.add('gone'); setTimeout(() => intro.remove(), 700); }
+    document.body.classList.add('mouse');
+    if (!(H() && H().vmi)) document.body.classList.add('norive');
+    showMini();
+    if (H() && !H().vmi && $('tourBtn')) setTimeout(() => $('tourBtn').click(), 300);   // aperçu sans .riv
+  }
+  function afterCam(){ document.body.classList.add('cam'); showMini(); if (pipWanted) pip.classList.add('on'); }
+  $('startBtn') && ($('startBtn').onclick = begin);
+  $('mouseLink') && ($('mouseLink').onclick = (e) => { e.preventDefault(); mouseMode(); });
+
+  // ===================================================================
+  // 2. Mini-barre joueur
+  // ===================================================================
+  const mini = el(`
+  <div id="mini">
+    <button id="mSound" title="Sound (M)">🔊</button>
+    <button id="mMirror" title="Show my face tracking">🪞</button>
+    <button id="mRecal" title="Recalibrate (neutral face)">↺</button>
+    <button id="mFull" title="Fullscreen">⛶</button>
+    <button id="mAbout" title="How it's made">?</button>
+  </div>`);
+  app.appendChild(mini);
+  function showMini(){ mini.classList.add('on'); }
+  if (SKIP_INTRO) showMini();
+  $('mSound').onclick = () => { const b = $('muteBtn'); if (b) b.click(); syncSound(); };
+  function syncSound(){ const b = $('muteBtn'); if (b) $('mSound').textContent = b.textContent; }
+  addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'm') setTimeout(syncSound, 0); });
+  $('mRecal').onclick = () => { const b = $('camBtn'); if (b && /recalibrate/i.test(b.textContent)) b.click(); };
+  $('mFull').onclick = () => {
+    const d = document;
+    if (d.fullscreenElement) d.exitFullscreen && d.exitFullscreen();
+    else (d.documentElement.requestFullscreen || d.documentElement.webkitRequestFullscreen || (() => {})).call(d.documentElement);
+  };
+
+  // ===================================================================
+  // 3. Miroir : ton visage et les points suivis, à la craie
+  // ===================================================================
+  const pip = el(`<canvas id="pip" width="320" height="240" title="Your face drives the ghost"></canvas>`);
+  app.appendChild(pip);
+  let pipWanted = !/Mobi|Android/i.test(navigator.userAgent);
+  $('mMirror').onclick = () => { pipWanted = !pipWanted; pip.classList.toggle('on', pipWanted && document.body.classList.contains('cam')); };
+  const OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
+  const EYE_L = [33, 160, 158, 133, 153, 144], EYE_R = [362, 385, 387, 263, 373, 380];
+  const LIPS = [61, 40, 37, 0, 267, 270, 291, 321, 314, 17, 84, 91];
+  const BROW_L = [70, 63, 105, 66, 107], BROW_R = [336, 296, 334, 293, 300];
+  const pg = pip.getContext('2d');
+  function drawPip(){
+    requestAnimationFrame(drawPip);
+    if (!pip.classList.contains('on')) return;
+    const h = H(); if (!h || !h.video || !h.video.videoWidth) return;
+    const v = h.video, W = pip.width, Hh = pip.height;
+    const s = Math.max(W / v.videoWidth, Hh / v.videoHeight), dw = v.videoWidth * s, dh = v.videoHeight * s, ox = (W - dw) / 2, oy = (Hh - dh) / 2;
+    pg.save(); pg.translate(W, 0); pg.scale(-1, 1);
+    pg.filter = 'grayscale(1) brightness(0.45) contrast(1.2)'; pg.drawImage(v, ox, oy, dw, dh); pg.filter = 'none'; pg.restore();
+    const lm = h.lm;
+    if (lm){
+      const P = (i) => [ox + (1 - lm[i].x) * dw, oy + lm[i].y * dh];
+      const line = (idx, close, col, w) => { pg.beginPath(); idx.forEach((i, k) => { const [x, y] = P(i); k ? pg.lineTo(x, y) : pg.moveTo(x, y); }); if (close) pg.closePath(); pg.strokeStyle = col; pg.lineWidth = w; pg.stroke(); };
+      const o = h.out;
+      pg.save(); pg.shadowColor = '#c9b6ff'; pg.shadowBlur = 6;
+      line(OVAL, true, 'rgba(201,182,255,.55)', 1.5);
+      line(BROW_L, false, '#c9b6ff', 2); line(BROW_R, false, '#c9b6ff', 2);
+      line(EYE_L, true, '#ece8f2', 2); line(EYE_R, true, '#ece8f2', 2);
+      line(LIPS, true, o.faceScary > 0.6 ? '#ff6b5e' : o.faceSmile > 0.5 ? '#7fd18b' : '#ffb35c', 2.5);
+      pg.restore();
+      // jauges
+      const bars = [['MOUTH', o.faceJaw, '#ffb35c'], ['SMILE', o.faceSmile, '#7fd18b'], ['SCARE', o.faceScary, '#ff6b5e']];
+      bars.forEach(([n, val, c], i) => {
+        const y = Hh - 14 - i * 16;
+        pg.fillStyle = '#0009'; pg.fillRect(70, y - 8, W - 82, 8);
+        pg.fillStyle = c; pg.fillRect(70, y - 8, (W - 82) * Math.max(0, Math.min(1, val)), 8);
+        pg.fillStyle = '#ece8f2'; pg.font = '700 10px system-ui'; pg.fillText(n, 10, y);
+      });
+    } else { pg.fillStyle = '#ece8f2'; pg.font = '700 13px system-ui'; pg.textAlign = 'center'; pg.fillText('Face not found', W / 2, Hh / 2); pg.textAlign = 'left'; }
+  }
+  requestAnimationFrame(drawPip);
+  // le miroir se cache pendant la finale et la carte
+  setInterval(() => {
+    const busy = (window.HMAT_FINALE && window.HMAT_FINALE.active) || ($('card') && $('card').style.display === 'flex');
+    pip.classList.toggle('hide', !!busy);
+    mini.classList.toggle('hide', !!(window.HMAT_FINALE && window.HMAT_FINALE.active));
+  }, 250);
+
+  // ===================================================================
+  // 7. How it's made
+  // ===================================================================
+  const about = el(`
+  <div id="about"><div class="box">
+    <button id="aboutClose" class="x">×</button>
+    <h2>How it's made</h2>
+    <p><b>Your real face is the ghost costume.</b> Your webcam drives a hand-built Rive ghost: open your mouth and the sheet gasps, frown and the eye holes turn mean, blink and they blink.</p>
+    <ul>
+      <li><b>Rive State Machine</b> runs the whole trick-or-treat night: four doors, each waiting for a real expression (shout, smile, scary face), with hold timers, fail states and the ending.</li>
+      <li><b>Data Binding</b>: 12 face values (jaw, smile, brows, blinks, gaze, head position, roll, a combined “scare” score) stream into a Rive View Model every frame. Thresholds live in Rive, not in code.</li>
+      <li><b>GPU Canvas (WGSL)</b>: a custom shader draws the night: porch lamp halo that flickers when you scare, moonlight dust, ground mist that parts around the sheet, and the blood-red reveal.</li>
+      <li><b>Luau scripting</b> drives the shader and the candy counters.</li>
+      <li><b>MediaPipe Face Landmarker</b> reads 52 expressions locally; a 2.5 s neutral-face calibration adapts every threshold to your face.</li>
+      <li>Night porches rendered in <b>Blender</b>; characters from Open Peeps (CC0), rigged and animated in Rive.</li>
+    </ul>
+    <p class="small">🔒 Nothing leaves your browser: no image is uploaded or stored. The replay video is only created on your device when you ask for it.</p>
+    <p class="small">Made for the Rive Halloween Challenge · <a href="https://github.com/Faadil1/Haunt-me-a-treat" target="_blank" rel="noopener">source</a> · credits in CREDITS.md</p>
+  </div></div>`);
+  app.appendChild(about);
+  const openAbout = (e) => { if (e) e.preventDefault(); about.classList.add('on'); };
+  $('aboutLink') && ($('aboutLink').onclick = openAbout);
+  $('mAbout').onclick = openAbout;
+  $('aboutClose').onclick = () => about.classList.remove('on');
+  about.onclick = (e) => { if (e.target === about) about.classList.remove('on'); };
+
+  // Le bouton son créé par extras.js part dans la mini-barre (la barre de dev est cachée)
+  setTimeout(syncSound, 500);
+})();

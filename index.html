@@ -2,7 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Your real face is the ghost costume. Trick-or-treat with your webcam: shout, smile and scare your way through a haunted street. Made with Rive.">
+<meta name="theme-color" content="#05040a">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Haunt Me a Treat: your real face is the ghost costume">
+<meta property="og:description" content="Put on the sheet. Your webcam brings it to life. Shout, smile and scare your way through a haunted street. Made with Rive.">
+<meta property="og:image" content="https://faadil1.github.io/Haunt-me-a-treat/assets/og.jpg">
+<meta property="og:url" content="https://faadil1.github.io/Haunt-me-a-treat/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Haunt Me a Treat: your real face is the ghost costume">
+<meta name="twitter:image" content="https://faadil1.github.io/Haunt-me-a-treat/assets/og.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 150'%3E%3Cpath d='M10 70C10 25 35 5 60 5s50 20 50 65v70l-15-12-15 14-15-14-15 14-15-14-15 14-10-12z' fill='%23efeaf3'/%3E%3Cellipse cx='42' cy='58' rx='10' ry='13' fill='%230b0910'/%3E%3Cellipse cx='78' cy='58' rx='10' ry='13' fill='%230b0910'/%3E%3C/svg%3E">
 <title>Haunt Me a Treat</title>
 <style>
   :root{--bg:#0a0910;--panel:#14121b;--ink:#ece8f2;--mute:#8a8398;--acc:#c9b6ff;--ok:#7fd18b;--bad:#ff6b5e;--candy:#ffb35c}
@@ -38,6 +49,52 @@
   .ok{color:var(--ok)}.bad{color:var(--bad)}
   #privacy{position:absolute;left:16px;top:16px;font-size:12px;color:var(--mute);max-width:260px}
   video{display:none}
+
+  /* ---------- habillage joueur (ui.js) ---------- */
+  body:not(.dev) .hud, body:not(.dev) #privacy, body:not(.dev) #debug{display:none!important}
+  body.mouse.norive:not(.dev) .hud{display:flex!important}
+  body.mouse.norive:not(.dev) .hud > :not(.hold){display:none}
+  #intro{position:absolute;inset:0;z-index:40;background:radial-gradient(ellipse at 50% 30%,#1a1430 0%,#05040a 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:24px;text-align:center;transition:opacity .7s}
+  #intro.gone{opacity:0;pointer-events:none}
+  #intro .moon{position:absolute;top:9%;right:14%;width:min(14vw,110px);aspect-ratio:1;border-radius:50%;background:#f3eedd;box-shadow:0 0 80px 20px #f3eedd33;opacity:.85}
+  #intro .lines p{margin:.35em 0;font:600 clamp(20px,3.4vw,34px)/1.25 Georgia,'Times New Roman',serif;color:#ece8f2;min-height:1.25em;letter-spacing:.01em}
+  #intro .lines p:last-child{color:#c9b6ff;font-style:italic}
+  #intro .cta{display:flex;flex-direction:column;align-items:center;gap:16px;opacity:0;transform:translateY(12px);transition:opacity .8s,transform .8s;pointer-events:none}
+  #intro.ready .cta{opacity:1;transform:none;pointer-events:auto}
+  #intro h1{margin:0;font:900 clamp(30px,6vw,64px)/1 system-ui,sans-serif;letter-spacing:.06em;color:#ece8f2;text-shadow:0 0 30px #c9b6ff55}
+  button.big{font-size:clamp(17px,2.2vw,22px);font-weight:800;padding:16px 34px;border-radius:999px;background:#ece8f2;color:#0b0910;border:0;box-shadow:0 0 40px #c9b6ff66;transition:transform .15s,box-shadow .15s}
+  button.big:hover{transform:scale(1.04);box-shadow:0 0 60px #c9b6ffaa}
+  #intro .alt a,#about a{color:#c9b6ff}
+  #intro .alt{font-size:14px}
+  #intro .notes{font-size:12.5px;color:#8a8398;max-width:560px}
+  #loading,#nocam{position:absolute;inset:0;z-index:38;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#05040af2;text-align:center;padding:24px}
+  #loading.on{display:flex}
+  #nocam{display:flex}
+  #nocam .small,#loadHint{color:#8a8398;font-size:13px}
+  #loading .sheet{animation:float 2.4s ease-in-out infinite}
+  @keyframes float{50%{transform:translateY(-12px) rotate(2deg)}}
+  #loadMsg{font:700 20px system-ui}
+  #loading .bar{width:min(320px,70vw);height:4px;background:#221e2c;border-radius:4px;overflow:hidden}
+  #loading .bar i{display:block;height:100%;width:35%;background:#c9b6ff;animation:slide 1.3s ease-in-out infinite}
+  @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+  #mini{position:absolute;top:12px;right:12px;z-index:16;display:none;gap:6px}
+  #mini.on{display:flex}
+  #mini.hide{display:none}
+  #mini button{width:38px;height:38px;padding:0;border-radius:50%;font-size:16px;opacity:.7;background:#14121bcc}
+  #mini button:hover{opacity:1}
+  body.dev #mini{top:60px}
+  body.mouse #prompt{top:64px}body.mouse #sub{top:106px}
+  #pip{position:absolute;left:12px;bottom:12px;width:min(220px,30vw);height:auto;aspect-ratio:4/3;border-radius:12px;border:1px solid #c9b6ff55;box-shadow:0 8px 30px #000a;z-index:15;display:none}
+  #pip.on{display:block}
+  #pip.hide{display:none}
+  #about{position:absolute;inset:0;z-index:45;display:none;align-items:center;justify-content:center;background:#05040acc;backdrop-filter:blur(4px);padding:16px}
+  #about.on{display:flex}
+  #about .box{position:relative;max-width:640px;max-height:90vh;overflow:auto;background:#14121b;border:1px solid #2a2436;border-radius:16px;padding:24px 26px;line-height:1.5}
+  #about h2{margin:0 0 10px}
+  #about li{margin:6px 0}
+  #about .small{color:#8a8398;font-size:13px}
+  #about .x{position:absolute;top:10px;right:10px;width:34px;height:34px;padding:0;border-radius:50%}
+  @media (max-width:600px){ #mini button{width:34px;height:34px;font-size:14px} #intro .moon{top:5%;right:8%} }
 </style>
 </head>
 <body>
@@ -86,5 +143,6 @@
 <script src="./extras.js"></script>
 <script src="./finale.js"></script>
 <script src="./replay.js"></script>
+<script src="./ui.js"></script>
 </body>
 </html>
