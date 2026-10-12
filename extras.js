@@ -178,7 +178,7 @@
     for (const raw of e.detail){
       const s = String(raw).toLowerCase();
       const leave = () => { atDoor = false; };
-      if (/enfiler|drap_tombe/.test(s)){ sfx('whoosh'); leave(); Object.assign(game, { candies: 0, best: 0, bestFace: null, bestShot: null, outcome: null, scoreVoisin: 0, playing: true, twist: false }); hideCard(); }
+      if (/enfiler|drap_tombe/.test(s)){ sfx('whoosh'); leave(); shotSource(); Object.assign(game, { candies: 0, best: 0, bestFace: null, bestShot: null, outcome: null, scoreVoisin: 0, playing: true, twist: false }); hideCard(); }
       else if (/bonbon|note/.test(s)){ sfx('candy'); if (atDoor) game.candies++; leave(); }
       else if (/ferme/.test(s)){ sfx('slam'); leave(); }
       else if (/pleure/.test(s)){ sfx('sob'); leave(); }
@@ -211,16 +211,22 @@
 
   // Copie de l'image Rive. Le canvas WebGL ne garde pas son image entre deux images : on copie
   // juste après le rendu de Rive (requestAnimationFrame imbriqué), et on vérifie qu'elle n'est pas vide.
+  // Copie de l'image Rive via un flux vidéo du canvas (fiable même si le canvas WebGL ne garde pas son image)
+  let shotVid = null;
+  function shotSource(){
+    if (shotVid) return shotVid;
+    const c = H() && H().canvas; if (!c || !c.captureStream) return null;
+    shotVid = document.createElement('video'); shotVid.muted = true; shotVid.playsInline = true;
+    shotVid.srcObject = c.captureStream(30); shotVid.play().catch(() => {});
+    return shotVid;
+  }
   function grabShot(force){
-    const src = H() && H().canvas; if (!src || !src.width) return;
-    requestAnimationFrame(() => setTimeout(() => {
-      try {
-        const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
-        const g = c.getContext('2d'); g.drawImage(src, 0, 0);
-        const px = g.getImageData(c.width / 2, c.height * 0.75, 1, 1).data;
-        if (px[0] + px[1] + px[2] + px[3] > 0 || force) game.bestShot = c;
-      } catch {}
-    }, 0));
+    const v = shotSource(); if (!v || !v.videoWidth) return;
+    try {
+      const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
+      c.getContext('2d').drawImage(v, 0, 0);
+      game.bestShot = c;
+    } catch {}
   }
 
   function readVM(name){
@@ -265,7 +271,7 @@
 
   function renderCard(){
     const c = $('cardCanvas'), g = c.getContext('2d'), W = c.width, Hh = c.height;
-    const candies = readVM('candies') ?? game.candies;
+    const candies = game.candies;   // compté par la page (le compteur Rive n'est pas remis à zéro entre deux parties)
     const nScore = readVM('neighborScore');
     const grim = Math.round(game.best * 100);
     // fond

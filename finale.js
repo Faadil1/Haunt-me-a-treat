@@ -89,7 +89,7 @@
   // la silhouette (masque) en miroir, remplie d'une couleur ou de la vidéo
   function silhouette(L, fill, alpha){
     if (!haveMask) return;
-    tmp.width = L.W; tmp.height = L.Hh;
+    tg.clearRect(0, 0, tmp.width, tmp.height);
     tg.save(); tg.translate(L.W, 0); tg.scale(-1, 1);
     if (fill === 'video'){ tg.filter = 'grayscale(1) contrast(1.25) brightness(0.62)'; tg.drawImage(H().video, L.ox, L.oy, L.dw, L.dh); tg.filter = 'none'; }
     else { tg.fillStyle = fill; tg.fillRect(L.ox, L.oy, L.dw, L.dh); }
@@ -148,10 +148,24 @@
   const T = { A: 1.6, B: 4.6, D: 8.6, END: 10.2 };   // A miroir · B effacement · C l'enfant derrière toi · D flash
   let t0 = 0, raf = 0, heart = false, stung = false;
 
+  // Résolution interne fixe (≤ 1280 px de large) : évite de réallouer le canvas à chaque image
+  // (avec un zoom Windows à 125 %, innerWidth × devicePixelRatio n'est pas entier) et garde les filtres légers.
+  function fit(){
+    const w = Math.min(1280, Math.round(innerWidth)), h = Math.round(w * innerHeight / innerWidth);
+    if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
+    if (tmp.width !== w || tmp.height !== h){ tmp.width = w; tmp.height = h; }
+  }
+  let phaseLogged = '', errLogged = false;
   function frame(now){
-    const t = (now - t0) / 1000;
-    const d = devicePixelRatio || 1;
-    if (cv.width !== innerWidth * d){ cv.width = innerWidth * d; cv.height = innerHeight * d; }
+    raf = requestAnimationFrame(frame);
+    try { draw(now); }
+    catch (e){ if (!errLogged){ errLogged = true; log('finale : erreur ' + (e && e.message)); } }
+  }
+  function draw(now){
+    const t = (performance.now() - t0) / 1000;
+    const ph = t < T.A ? 'A miroir' : t < T.B ? 'B effacement' : t < T.D ? 'C derrière toi' : 'D flash';
+    if (ph !== phaseLogged){ phaseLogged = ph; log('finale : ' + ph + (haveMask ? ' (silhouette)' : ' (sans silhouette)')); }
+    fit();
     const L = layout();
     updateMask(now);
     const F = faceBox(L);
@@ -186,18 +200,17 @@
       if (t > T.D + 0.5){
         g.fillStyle = '#8a1018'; g.textAlign = 'center'; g.font = `800 ${Math.round(L.Hh * 0.06)}px system-ui, sans-serif`;
         g.globalAlpha = Math.min(1, (t - T.D - 0.5) / 0.6);
-        g.fillText('Happy Halloween.', L.W / 2, L.Hh / 2); g.globalAlpha = 1;
+        g.fillText('Don\u2019t turn around.', L.W / 2, L.Hh / 2); g.globalAlpha = 1;
       }
     }
-    if (t >= T.END){ stop(); return; }
-    raf = requestAnimationFrame(frame);
+    if (t >= T.END) stop();
   }
   let kidSideSet = false;
 
   function start(){
     if (!webcamOn()){ state.active = false; dispatchEvent(new Event('hmat:finale-done')); return; }
     log('finale : BEHIND YOU');
-    cv.style.display = 'block'; t0 = performance.now(); heart = stung = kidSideSet = false;
+    cv.style.display = 'block'; t0 = performance.now(); heart = stung = kidSideSet = false; phaseLogged = ''; errLogged = false;
     raf = requestAnimationFrame(frame);
   }
   function stop(){
