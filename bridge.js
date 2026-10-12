@@ -262,7 +262,8 @@
       onLoadError: (e) => log(`erreur de chargement Rive : ${e && e.data || e}`),
       onStateChange: (e) => {
         const states = (e && e.data || []).filter((x) => x && x !== 'Any State' && x !== 'Entry' && x !== 'Exit');
-        if (states.length){ log(`état → ${states.join(', ')}`); $('mode').textContent = `Rive · ${states[states.length - 1]}`; }
+        if (states.length){ log(`état → ${states.join(', ')}`); $('mode').textContent = `Rive · ${states[states.length - 1]}`;
+          dispatchEvent(new CustomEvent('hmat:state', { detail: states })); }
       },
     };
     if (sm) opts.stateMachines = sm;
@@ -322,6 +323,7 @@
   function onRiveTrigger(name){
     log(`Rive → page : ${name}`);
     if (name === 'snapshot') captureCard();
+    dispatchEvent(new CustomEvent('hmat:trigger', { detail: name }));
   }
   function pushToRive(){
     if (!vmi || !OPT.push) return;
@@ -471,5 +473,7 @@
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
+  // pont vers extras.js (son, carte souvenir) : lecture seule
+  window.HMAT = { out, log, get vmi(){ return vmi; }, get rive(){ return r; }, canvas: $('riveCanvas') };
   log('prêt — « Enfiler le drap » pour la webcam, ou les boutons Crier / Sourire / Grimacer');
 })();
