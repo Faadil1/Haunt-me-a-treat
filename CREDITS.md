@@ -7,6 +7,8 @@
 | Le drap | Création originale pour ce projet | — | `assets/characters/drap.svg` |
 | Suivi du visage | [MediaPipe Face Landmarker](https://developers.google.com/mediapipe), Google | Apache 2.0 | Chargé depuis jsDelivr dans `bridge.js` |
 | Runtime Rive | [@rive-app/webgl2](https://www.npmjs.com/package/@rive-app/webgl2) | MIT | Chargé depuis jsDelivr dans `index.html` |
+| Compteur de bonbons (HUD) | Écrit en RML avec la Rive CLI (`cli/candy-hud`) | Projet | Second fichier Rive affiché par `hud.js` |
+| Police Inter | [Inter](https://rsms.me/inter/), Rasmus Andersson | SIL Open Font License 1.1 | Chiffres du HUD |
 | Sons | À compléter (Freesound CC0 et enregistrements maison) | — | — |
 
 Merci à Kenney et à Pablo Stanley d'avoir mis leur travail dans le domaine public.

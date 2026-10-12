@@ -174,6 +174,7 @@
   // ===================================================================
   const game = { candies: 0, best: 0, bestFace: null, bestShot: null, outcome: null, scoreVoisin: 0, lastShot: 0, playing: false };
 
+  window.HMAT_GAME = game;   // lu par hud.js (le compteur de bonbons fait avec la Rive CLI)
   addEventListener('hmat:state', (e) => {
     for (const raw of e.detail){
       const s = String(raw).toLowerCase();
