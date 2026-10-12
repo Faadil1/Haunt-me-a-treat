@@ -101,9 +101,23 @@
       for (let i = 0; i < 6; i++){ const b = t + 0.6 + i * 0.85; tone(b, { f: 62, to: 40, a: 0.004, d: 0.16, vol: 0.8 }); tone(b + 0.22, { f: 55, to: 38, a: 0.004, d: 0.2, vol: 0.55 }); }
       noiseHit(t + 4.5, { f: 120, sweepTo: 3000, q: 0.7, a: 2.2, d: 0.4, vol: 0.35 });
       tone(t + 4.5, { f: 55, type: 'sawtooth', a: 2.0, d: 3.5, vol: 0.12, vib: 2 }); },
+    // « Behind You » : le cœur s'emballe (70 → 170 bpm) pendant `dur` secondes
+    heartFast(dur = 6){ const t0 = ac.currentTime; let t = 0;
+      while (t < dur){ const bpm = 70 + 100 * (t / dur); const b = t0 + t;
+        tone(b, { f: 60, to: 38, a: 0.003, d: 0.14, vol: 0.9 }); tone(b + 0.18, { f: 52, to: 36, a: 0.003, d: 0.16, vol: 0.6 });
+        t += 60 / bpm; }
+      tone(t0, { f: 41, type: 'sawtooth', a: dur * 0.9, d: 0.3, vol: 0.10, vib: 1 }); },
+    // le choc final : boum, souffle, cri
+    stinger(){ const t = ac.currentTime;
+      if (ambGain) ambGain.gain.setTargetAtTime(0.0001, t, 0.01);
+      tone(t, { f: 70, to: 28, a: 0.002, d: 0.9, vol: 1.0 });
+      noiseHit(t, { f: 2500, q: 0.4, a: 0.002, d: 0.7, vol: 0.9, sweepTo: 300 });
+      SFX.scream();
+      if (ambGain) ambGain.gain.setTargetAtTime(0.06, t + 4, 1.5); },
     win(){ const t = ac.currentTime + 1.2; [523, 659, 784, 1046].forEach((f, i) => tone(t + i * 0.1, { f, type: 'triangle', a: 0.01, d: 0.6, vol: 0.12 })); },
   };
-  const sfx = (n) => { if (audio() && ac.state === 'running') try { SFX[n](); } catch (e) { log('son : ' + e.message); } };
+  const sfx = (n, ...args) => { if (audio() && ac.state === 'running') try { SFX[n](...args); } catch (e) { log('son : ' + e.message); } };
+  window.HMAT_SFX = sfx;
 
   // Ambiance : vent filtré qui respire + grillons
   let ambGain = null;
@@ -172,7 +186,7 @@
       else if (/perdu/.test(s)){ game.outcome = 'lose'; sfx('jeer'); if (atDoor) game.candies = Math.max(0, game.candies - 1); leave(); }
       else if (/revel|reflet|vitre|twist/.test(s)){ game.twist = true; sfx('reveal'); leave(); }
       else if (/tient/.test(s)){ sfx('tension'); }
-      else if (/carte/.test(s)){ leave(); if (game.playing) setTimeout(showCard, 600); game.playing = false; }
+      else if (/carte/.test(s)){ leave(); if (game.playing) whenFree(() => setTimeout(showCard, 600)); game.playing = false; }
       else if (/arrivee|^porte[1-4]$|^fin$/.test(s)){
         if (!atDoor){ sfx('knock'); sfx('creak'); }   // une seule fois par porte, pas à chaque retour depuis « _Tient »
         atDoor = true;
@@ -220,7 +234,7 @@
   css.textContent = `
   #card{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#05040acc;backdrop-filter:blur(4px);z-index:20;padding:16px}
   #card .wrap{display:flex;flex-direction:column;gap:12px;align-items:center;max-height:100%}
-  #card canvas{max-height:calc(100vh - 110px);max-width:100%;border-radius:14px;box-shadow:0 20px 60px #000c}
+  #card canvas{max-height:calc(100vh - 170px);max-width:100%;border-radius:14px;box-shadow:0 20px 60px #000c}
   #card .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
   #muteBtn{min-width:44px}`;
   document.head.appendChild(css);
@@ -290,6 +304,11 @@
     g.fillText('My real face was driving the ghost · made with @rive_app', W / 2, Hh - 40);
   }
 
+  // si la finale « Behind You » est en cours, la carte attend qu'elle soit finie
+  function whenFree(fn){
+    if (window.HMAT_FINALE && window.HMAT_FINALE.active) addEventListener('hmat:finale-done', fn, { once: true });
+    else fn();
+  }
   function showCard(){ renderCard(); card.style.display = 'flex'; log('carte souvenir affichée'); }
   function hideCard(){ card.style.display = 'none'; }
   $('cardClose').onclick = hideCard;

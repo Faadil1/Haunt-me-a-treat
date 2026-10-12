@@ -56,6 +56,7 @@
     facePresent: false, webcamMode: false,
   };
   const geo = { lookX: 0, lookY: 0, headX: 0, headY: 0, roll: 0 };
+  let lastLm = null;   // derniers repères du visage (pour finale.js)
 
   function norm(k){
     const base = cal.base[k];
@@ -155,6 +156,7 @@
     if (cal.done) for (const k of RAW_KEYS) cal.peak[k] = Math.max(cal.peak[k] * 0.9997, raw[k]);
 
     const lm = res.faceLandmarks[0];
+    lastLm = lm;
     const P = (i) => lm[i];
     // regard : position de l'iris entre les coins de l'œil
     const gaze = (iris, a, b, top, bot) => {
@@ -474,6 +476,6 @@
   }
   requestAnimationFrame(loop);
   // pont vers extras.js (son, carte souvenir) : lecture seule
-  window.HMAT = { out, log, get vmi(){ return vmi; }, get rive(){ return r; }, canvas: $('riveCanvas') };
+  window.HMAT = { out, log, MP, video, get lm(){ return out.facePresent ? lastLm : null; }, get vmi(){ return vmi; }, get rive(){ return r; }, canvas: $('riveCanvas') };
   log('prêt — « Enfiler le drap » pour la webcam, ou les boutons Crier / Sourire / Grimacer');
 })();
