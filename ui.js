@@ -71,7 +71,8 @@
   async function type(){
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await wait(500);
-    for (const [id, txt] of LINES){
+    const src = window.HMAT_INTRO_LINES ? LINES.map(([id], i) => [id, window.HMAT_INTRO_LINES[i]]) : LINES;
+    for (const [id, txt] of src){
       const p = $(id);
       for (let i = 1; i <= txt.length; i++){ p.textContent = txt.slice(0, i); await wait(id === 'l3' ? 70 : 45); }
       await wait(id === 'l3' ? 500 : 650);
@@ -79,7 +80,7 @@
     intro.classList.add('ready'); window.__igOpen && window.__igOpen();
   }
   if (SKIP_INTRO){ intro.remove(); document.body.classList.remove('intro-on'); } else type();
-  intro.addEventListener('click', (e) => { if (!intro.classList.contains('ready') && e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON'){ LINES.forEach(([id, t]) => $(id).textContent = t); intro.classList.add('ready'); window.__igOpen && window.__igOpen(); } });
+  intro.addEventListener('click', (e) => { if (!intro.classList.contains('ready') && e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON'){ (window.HMAT_INTRO_LINES ? LINES.map(([id], i) => [id, window.HMAT_INTRO_LINES[i]]) : LINES).forEach(([id, t]) => $(id).textContent = t); intro.classList.add('ready'); window.__igOpen && window.__igOpen(); } });
 
   // ===================================================================
   // 5. Chargement (webcam + modèle de visage ~10 Mo)
@@ -262,7 +263,7 @@
       <li><b>MediaPipe Face Landmarker</b> reads 52 expressions locally; a 2.5 s neutral-face calibration adapts every threshold to your face.</li>
       <li>Night porches rendered in <b>Blender</b>; characters from Open Peeps (CC0), rigged and animated in Rive.</li>
     </ul>
-    <p class="small">🔒 Nothing leaves your browser: no image is uploaded or stored. The replay video is only created on your device when you ask for it.</p>
+    <p class="small">🔒 Nothing leaves your browser: no image is ever uploaded. The replay video is only created on your device when you ask for it. After the ending, one small grayscale picture of your stolen smile is kept <i>in this browser only</i> (localStorage) so the page can greet you when you come back; “make it forget me” on the start screen deletes it.</p>
     <p class="small">Made for the Rive Halloween Challenge · <a href="https://github.com/Faadil1/Haunt-me-a-treat" target="_blank" rel="noopener">source</a> · credits in CREDITS.md</p>
   </div></div>`);
   app.appendChild(about);

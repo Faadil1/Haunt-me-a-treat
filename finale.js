@@ -20,7 +20,7 @@
   const SEG_MODEL = 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite';
   const sfx = (...a) => window.HMAT_SFX && window.HMAT_SFX(...a);
 
-  const state = { active: false };
+  const state = { active: false, smile: null };
   window.HMAT_FINALE = state;
 
   // ---------- calques ----------
@@ -152,7 +152,7 @@
 
   // ---------- le sourire volé : quelques secondes de webcam enregistrées pendant que tu souris à l'enfant ----------
   // (en mémoire seulement, effacées à chaque nouvelle partie, jamais envoyées ni enregistrées)
-  const smile = []; let smileTimer = 0;
+  const smile = []; let smileTimer = 0; state.smile = smile;
   function captureSmile(){
     if (smileTimer || smile.length >= 45 || !webcamOn()) return;
     smileTimer = setInterval(() => {
@@ -221,7 +221,9 @@
       if (t > T.D + 0.5){
         g.fillStyle = '#8a1018'; g.textAlign = 'center'; g.font = `800 ${Math.round(L.Hh * 0.06)}px system-ui, sans-serif`;
         g.globalAlpha = Math.min(1, (t - T.D - 0.5) / 0.6);
-        g.fillText('Don\u2019t turn around.', L.W / 2, L.Hh / 2); g.globalAlpha = 1;
+        g.fillText('Don\u2019t turn around.', L.W / 2, L.Hh / 2);
+        if (smile.length > 4 && t > T.D + 1.2){ g.globalAlpha = Math.min(1, (t - T.D - 1.2) / 0.5); g.fillStyle = '#8a8398'; g.font = `italic ${Math.round(L.Hh * 0.032)}px 'IM Fell English', Georgia, serif`; g.fillText('It kept your smile.', L.W / 2, L.Hh / 2 + L.Hh * 0.08); }
+        g.globalAlpha = 1;
       }
     }
     if (t >= T.END) stop();
