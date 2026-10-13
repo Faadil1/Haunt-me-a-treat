@@ -4,6 +4,7 @@ __pycache__/
 node_modules/
 *.blend1
 
-# Exports Rive : un seul fichier suivi, assets/rive/haunt.riv
+# Exports Rive : fichiers suivis explicitement
 assets/rive/*.riv
 !assets/rive/haunt.riv
+!assets/rive/candy-hud.riv

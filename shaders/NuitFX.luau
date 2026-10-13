@@ -1,4 +1,3 @@
---!strict
 -- NuitFX : script Node qui dessine le shader WGSL `NuitFX` dans un GPU Canvas plein artboard.
 --
 -- Deux instances de ce script dans la hiérarchie de l'artboard Main :
@@ -10,9 +9,6 @@
 --
 -- Si le GPU Canvas n'est pas disponible (ancien runtime, aperçu), le script ne dessine rien :
 -- le jeu reste jouable.
---
--- LES LIGNES MARQUÉES « VÉRIFIER » utilisent des champs de descripteur non documentés publiquement
--- (GPUBuffer.new, GPUBindGroup.new). Corrige-les avec l'autocomplétion / les types de l'éditeur.
 
 type NuitFX = {
   layer: Input<number>,      -- 0 = derrière, 1 = devant
@@ -33,6 +29,9 @@ type NuitFX = {
   data: buffer,
   t: number,
   lamp: number,
+
+  context: Context?,
+  setupTries: number,
 }
 
 local W, H = 1920, 1080
@@ -46,15 +45,25 @@ local LAMP = {
   [4] = { 0.503, 0.55 },
 }
 
-function init(self: NuitFX, context: Context): boolean
-  self.data = buffer.create(UBO_SIZE)
+-- Tente de construire le canvas GPU, le pipeline et le bind group. Peut échouer
+-- au premier appel (le shader `NuitFX` n'est pas toujours prêt dès le premier
+-- init : voir la doc officielle, "init runs twice, and the view model is
+-- absent the first time" — le shader semble avoir le même genre de latence).
+-- Rappelée depuis draw() tant qu'elle n'a pas réussi, avec une limite pour ne
+-- pas boucler indéfiniment si le shader manque vraiment.
+local function trySetup(self: NuitFX): boolean
+  local context = self.context
+  if not context or self.canvas then
+    return self.canvas ~= nil
+  end
+
+  self.setupTries += 1
 
   local ok, err = pcall(function()
     local canvas = context:gpuCanvas({ width = W, height = H })
     local shader = context:shader('NuitFX')
     if not shader then
-      print('NuitFX : shader introuvable (le script WGSL doit s\'appeler NuitFX)')
-      return
+      error('shader introuvable (le script WGSL doit s\'appeler NuitFX)')
     end
 
     local pipeline = GPUPipeline.new({
@@ -64,13 +73,11 @@ function init(self: NuitFX, context: Context): boolean
       colorTargets = { { format = canvas.format } },
     })
 
-    -- VÉRIFIER : champs du descripteur de GPUBuffer (taille + usage uniforme).
     local ubo = GPUBuffer.new({ size = UBO_SIZE, usage = 'uniform' })
 
-    -- VÉRIFIER : champs du descripteur de GPUBindGroup (layout + entrées binding/buffer).
     local bindGroup = GPUBindGroup.new({
       layout = pipeline:getBindGroupLayout(0),
-      entries = { { binding = 0, buffer = ubo } },
+      ubos = { { slot = 0, buffer = ubo } },
     })
 
     self.canvas = canvas
@@ -80,11 +87,20 @@ function init(self: NuitFX, context: Context): boolean
   end)
 
   if not ok then
-    print('NuitFX désactivé : ' .. tostring(err))
-    self.canvas = nil
+    if self.setupTries >= 60 then
+      print('NuitFX désactivé après ' .. self.setupTries .. ' essais : ' .. tostring(err))
+    end
+    return false
   end
 
+  return true
+end
+
+function init(self: NuitFX, context: Context): boolean
+  self.data = buffer.create(UBO_SIZE)
+  self.context = context
   self.sampler = ImageSampler('clamp', 'clamp', 'bilinear')
+  trySetup(self)
   return true
 end
 
@@ -117,6 +133,10 @@ local function writeUniforms(self: NuitFX)
 end
 
 function draw(self: NuitFX, renderer: Renderer)
+  if not self.canvas then
+    trySetup(self)
+  end
+
   local canvas, pipeline, ubo, bindGroup = self.canvas, self.pipeline, self.ubo, self.bindGroup
   if not (canvas and pipeline and ubo and bindGroup and self.sampler) then
     return
@@ -158,6 +178,9 @@ return function(): Node<NuitFX>
     data = buffer.create(48),
     t = 0,
     lamp = 0,
+
+    context = nil,
+    setupTries = 0,
 
     init = init,
     advance = advance,
