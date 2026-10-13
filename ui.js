@@ -18,16 +18,54 @@
   // ===================================================================
   const intro = el(`
   <div id="intro">
+    <div class="fog f1"></div><div class="fog f2"></div><div class="grain"></div>
     <div class="moon"></div>
     <div class="lines"><p id="l1"></p><p id="l2"></p><p id="l3"></p></div>
+    <svg id="introGhost" viewBox="0 0 200 240" aria-hidden="true">
+      <defs><radialGradient id="ig" cx="50%" cy="35%" r="70%"><stop offset="0" stop-color="#fbf8ff"/><stop offset="1" stop-color="#d9d2e6"/></radialGradient></defs>
+      <path d="M20 118 C14 50 56 10 100 10 C144 10 186 50 180 118 L182 222 L160 206 L140 228 L120 206 L100 228 L80 206 L60 228 L40 206 L18 222 Z" fill="url(#ig)" stroke="#1a1622" stroke-width="4"/>
+      <path d="M62 150 C70 175 66 200 60 224 M140 150 C132 175 136 200 140 224 M100 160 L100 226" stroke="#1a162233" stroke-width="3" fill="none"/>
+      <g id="igEyes"><ellipse id="igL" cx="72" cy="96" rx="15" ry="20" fill="#0b0910"/><ellipse id="igR" cx="128" cy="96" rx="15" ry="20" fill="#0b0910"/>
+      <circle id="igLs" cx="76" cy="90" r="4" fill="#fff" opacity=".85"/><circle id="igRs" cx="132" cy="90" r="4" fill="#fff" opacity=".85"/></g>
+      <ellipse id="igMouth" cx="100" cy="146" rx="9" ry="0" fill="#0b0910"/>
+    </svg>
     <div class="cta">
-      <h1>HAUNT ME A TREAT</h1>
+      <h1 id="introTitle">HAUNT ME A TREAT</h1>
+      <div class="tag">a trick-or-treat night you play with <em>your real face</em></div>
       <button id="startBtn" class="big">Put on the sheet</button>
       <div class="alt"><a href="#" id="mouseLink">No webcam? Play with your mouse</a> · <a href="#" id="aboutLink">How it's made</a></div>
+      <div class="chips"><span>Rive State Machine</span><span>Data Binding · 12 face values</span><span>GPU Canvas · WGSL</span><span>Rive CLI · RML</span></div>
       <div class="notes">🎧 best with headphones · ⚠ jump scares &amp; flashing lights · 🔒 your webcam never leaves your browser</div>
     </div>
   </div>`);
   app.appendChild(intro);
+  document.body.classList.add('intro-on');
+
+  // titre : chaque lettre peut vaciller comme une ampoule qui meurt
+  (() => { const h = $('introTitle'); if (!h) return; h.innerHTML = h.textContent.split(' ').map((w) => `<b class="w">${[...w].map((c) => `<span>${c}</span>`).join('')}</b>`).join(' ');
+    const L = h.querySelectorAll('span');
+    setInterval(() => { if (!intro.isConnected || Math.random() < 0.5) return; const sp = L[(Math.random() * L.length) | 0]; sp.classList.add('flk'); setTimeout(() => sp.classList.remove('flk'), 300 + Math.random() * 500); }, 900);
+  })();
+  // le fantôme de l'accueil : yeux fermés pendant le texte, puis il les ouvre et te suit du regard
+  (() => {
+    const E = { L: $('igL'), R: $('igR'), Ls: $('igLs'), Rs: $('igRs'), M: $('igMouth') };
+    if (!E.L) return;
+    let open = 0, tgtOpen = 0, lx = 0, ly = 0, tx = 0, ty = 0, blink = 0, nextBlink = performance.now() + 3000, awe = 0, tgtAwe = 0;
+    intro.addEventListener('pointermove', (e) => { const r = $('introGhost').getBoundingClientRect(); tx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (innerWidth / 2))); ty = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height * 0.4)) / (innerHeight / 2))); });
+    const sb = $('startBtn'); sb.addEventListener('pointerenter', () => tgtAwe = 1); sb.addEventListener('pointerleave', () => tgtAwe = 0);
+    window.__igOpen = () => { tgtOpen = 1; };
+    (function loop(now){
+      if (!intro.isConnected) return;
+      requestAnimationFrame(loop);
+      open += (tgtOpen - open) * 0.06; lx += (tx - lx) * 0.12; ly += (ty - ly) * 0.12; awe += (tgtAwe - awe) * 0.15;
+      if (now > nextBlink){ blink = 1; nextBlink = now + 2500 + Math.random() * 3500; }
+      blink = Math.max(0, blink - 0.12);
+      const k = Math.max(0.06, open * (1 - Math.sin(Math.min(1, blink) * Math.PI) * 0.95));
+      const ry = 20 * k * (1 + awe * 0.35), rx = 15 * (1 + awe * 0.25), dx = lx * 7, dy = ly * 6;
+      [[E.L, E.Ls, 72], [E.R, E.Rs, 128]].forEach(([el, sh, cx]) => { el.setAttribute('cx', cx + dx); el.setAttribute('cy', 96 + dy); el.setAttribute('ry', ry); el.setAttribute('rx', rx); sh.setAttribute('cx', cx + 4 + dx * 1.2); sh.setAttribute('cy', 90 + dy - (1 - k) * 6); sh.setAttribute('opacity', k > 0.5 ? 0.85 : 0); });
+      E.M.setAttribute('ry', awe * 16); E.M.setAttribute('rx', 9 + awe * 3); E.M.setAttribute('cy', 146 + dy * 0.5);
+    })(performance.now());
+  })();
 
   const LINES = [['l1', "It's Halloween night."], ['l2', 'You have no costume.'], ['l3', '…but you have a face.']];
   async function type(){
@@ -38,10 +76,10 @@
       for (let i = 1; i <= txt.length; i++){ p.textContent = txt.slice(0, i); await wait(id === 'l3' ? 70 : 45); }
       await wait(id === 'l3' ? 500 : 650);
     }
-    intro.classList.add('ready');
+    intro.classList.add('ready'); window.__igOpen && window.__igOpen();
   }
-  if (SKIP_INTRO) intro.remove(); else type();
-  intro.addEventListener('click', (e) => { if (!intro.classList.contains('ready') && e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON'){ LINES.forEach(([id, t]) => $(id).textContent = t); intro.classList.add('ready'); } });
+  if (SKIP_INTRO){ intro.remove(); document.body.classList.remove('intro-on'); } else type();
+  intro.addEventListener('click', (e) => { if (!intro.classList.contains('ready') && e.target.tagName !== 'A' && e.target.tagName !== 'BUTTON'){ LINES.forEach(([id, t]) => $(id).textContent = t); intro.classList.add('ready'); window.__igOpen && window.__igOpen(); } });
 
   // ===================================================================
   // 5. Chargement (webcam + modèle de visage ~10 Mo)
@@ -59,7 +97,7 @@
   app.appendChild(loading);
 
   function begin(){
-    intro.classList.add('gone'); setTimeout(() => intro.remove(), 700);
+    intro.classList.add('gone'); document.body.classList.remove('intro-on'); setTimeout(() => intro.remove(), 700);
     loading.classList.add('on');
     if ($('camBtn')) $('camBtn').click();
     const t0 = performance.now();
@@ -81,7 +119,7 @@
     $('nocamMouse').onclick = () => { m.remove(); mouseMode(); };
   }
   function mouseMode(){
-    if (intro.isConnected){ intro.classList.add('gone'); setTimeout(() => intro.remove(), 700); }
+    if (intro.isConnected){ document.body.classList.remove('intro-on'); intro.classList.add('gone'); setTimeout(() => intro.remove(), 700); }
     document.body.classList.add('mouse');
     if (!(H() && H().vmi)) document.body.classList.add('norive');
     showMini();
@@ -130,7 +168,11 @@
   const pip = el(`<canvas id="pip" width="320" height="240" title="Your face drives the ghost"></canvas>`);
   app.appendChild(pip);
   let pipWanted = !/Mobi|Android/i.test(navigator.userAgent);
-  $('mMirror').onclick = () => { pipWanted = !pipWanted; pip.classList.toggle('on', pipWanted && document.body.classList.contains('cam')); };
+  $('mMirror').onclick = () => {
+    pipWanted = !pipWanted;
+    pip.classList.toggle('on', pipWanted && !!(H() && H().video && H().video.srcObject));
+    $('mMirror').classList.toggle('off', !pipWanted);
+  };
   const OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
   const EYE_L = [33, 160, 158, 133, 153, 144], EYE_R = [362, 385, 387, 263, 373, 380];
   const LIPS = [61, 40, 37, 0, 267, 270, 291, 321, 314, 17, 84, 91];
@@ -168,6 +210,9 @@
   requestAnimationFrame(drawPip);
   // le miroir se cache pendant la finale et la carte
   setInterval(() => {
+    // la webcam a pu être lancée sans passer par l'accueil (mode dev, bouton direct) : on le détecte ici
+    const hv = H() && H().video;
+    if (hv && hv.srcObject && hv.videoWidth && !document.body.classList.contains('cam')) afterCam();
     const busy = (window.HMAT_FINALE && window.HMAT_FINALE.active) || ($('card') && $('card').style.display === 'flex');
     pip.classList.toggle('hide', !!busy);
     mini.classList.toggle('hide', !!(window.HMAT_FINALE && window.HMAT_FINALE.active));

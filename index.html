@@ -15,6 +15,8 @@
 <meta name="twitter:image" content="https://faadil1.github.io/Haunt-me-a-treat/assets/og.jpg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 150'%3E%3Cpath d='M10 70C10 25 35 5 60 5s50 20 50 65v70l-15-12-15 14-15-14-15 14-15-14-15 14-10-12z' fill='%23efeaf3'/%3E%3Cellipse cx='42' cy='58' rx='10' ry='13' fill='%230b0910'/%3E%3Cellipse cx='78' cy='58' rx='10' ry='13' fill='%230b0910'/%3E%3C/svg%3E">
 <title>Haunt Me a Treat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0a0910;--panel:#14121b;--ink:#ece8f2;--mute:#8a8398;--acc:#c9b6ff;--ok:#7fd18b;--bad:#ff6b5e;--candy:#ffb35c}
   *{box-sizing:border-box}
@@ -59,17 +61,37 @@
   body.mouse .hud .hold b{font-size:16px;letter-spacing:.04em}
   body.mouse .hud .hold kbd{font:600 10px ui-monospace,monospace;color:#c9b6ff;opacity:.8}
   body.mouse .hud .hold:active{background:#c9b6ff;color:#0b0910;transform:scale(.97)}
-  #intro{position:absolute;inset:0;z-index:40;background:radial-gradient(ellipse at 50% 30%,#1a1430 0%,#05040a 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:24px;text-align:center;transition:opacity .7s}
+  #intro{position:absolute;inset:0;z-index:40;background:radial-gradient(ellipse at 50% 38%,rgba(24,18,46,.80) 0%,rgba(8,6,16,.92) 58%,rgba(3,2,6,.98) 100%);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;transition:opacity .9s;overflow:hidden}
   #intro.gone{opacity:0;pointer-events:none}
-  #intro .moon{position:absolute;top:9%;right:14%;width:min(14vw,110px);aspect-ratio:1;border-radius:50%;background:#f3eedd;box-shadow:0 0 80px 20px #f3eedd33;opacity:.85}
-  #intro .lines p{margin:.35em 0;font:600 clamp(20px,3.4vw,34px)/1.25 Georgia,'Times New Roman',serif;color:#ece8f2;min-height:1.25em;letter-spacing:.01em}
-  #intro .lines p:last-child{color:#c9b6ff;font-style:italic}
-  #intro .cta{display:flex;flex-direction:column;align-items:center;gap:16px;opacity:0;transform:translateY(12px);transition:opacity .8s,transform .8s;pointer-events:none}
+  #intro .moon{position:absolute;top:8%;right:13%;width:min(13vw,104px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 38% 36%,#fffaf0,#e8e0c8 60%,#cfc6ad);box-shadow:0 0 90px 26px #f3eedd2a,0 0 12px #fff8;opacity:.9}
+  #intro .fog{position:absolute;left:-30%;width:160%;height:46%;bottom:-12%;pointer-events:none;filter:blur(30px);opacity:.55;background:radial-gradient(ellipse at 30% 60%,#8d84b866 0%,transparent 55%),radial-gradient(ellipse at 70% 50%,#6f669a55 0%,transparent 60%);animation:fogA 26s ease-in-out infinite alternate}
+  #intro .fog.f2{bottom:-20%;opacity:.4;animation:fogB 34s ease-in-out infinite alternate}
+  @keyframes fogA{to{transform:translateX(12%)}}@keyframes fogB{from{transform:translateX(8%)}to{transform:translateX(-10%)}}
+  #intro .grain{position:absolute;inset:-50%;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain .6s steps(4) infinite}
+  @keyframes grain{25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-1%)}}
+  #intro .lines{position:relative;z-index:1}
+  #intro .lines p{margin:.25em 0;font:400 clamp(20px,3.2vw,32px)/1.25 'IM Fell English',Georgia,serif;color:#ece8f2;min-height:1.25em;text-shadow:0 2px 18px #000}
+  #intro .lines p:last-child{color:#d8ccff;font-style:italic}
+  #introGhost{position:relative;z-index:1;width:clamp(110px,15vh,170px);height:auto;filter:drop-shadow(0 0 28px #c9b6ff66) drop-shadow(0 18px 20px #0009);animation:igfloat 3.2s ease-in-out infinite;margin:4px 0}
+  @keyframes igfloat{50%{transform:translateY(-10px) rotate(-1.5deg)}}
+  #intro .cta{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:14px;opacity:0;transform:translateY(14px);transition:opacity .9s,transform .9s;pointer-events:none}
   #intro.ready .cta{opacity:1;transform:none;pointer-events:auto}
-  #intro h1{margin:0;font:900 clamp(30px,6vw,64px)/1 system-ui,sans-serif;letter-spacing:.06em;color:#ece8f2;text-shadow:0 0 30px #c9b6ff55}
+  #intro h1{margin:0;font:400 clamp(38px,7.4vw,92px)/.95 'IM Fell English SC',Georgia,serif;letter-spacing:.04em;color:#f4ecdf;text-shadow:0 0 24px #c9b6ff66,0 0 2px #fff,0 6px 30px #000}
+  #intro h1 span{display:inline-block;transition:opacity .08s}
+  #intro h1 span.flk{animation:flk .5s steps(2) 1}
+  #intro h1 .w{font-weight:400;white-space:nowrap;display:inline-block}
+  body.intro-on #prompt,body.intro-on #sub{visibility:hidden}
+  @keyframes flk{0%,40%{opacity:.15;text-shadow:none}20%,60%,100%{opacity:1}}
+  #intro .tag{font:italic 400 clamp(16px,1.9vw,21px) 'IM Fell English',Georgia,serif;color:#b9b0c9;margin-top:-4px}
+  #intro .tag em{color:#ffb35c;font-style:italic}
+  #intro .chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:620px}
+  #intro .chips span{font:600 11px/1 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#c9b6ff;border:1px solid #c9b6ff44;background:#14121b99;border-radius:999px;padding:6px 10px}
+  #mini button.off{opacity:.35;text-decoration:line-through}
+  @media (max-height:700px){ #introGhost{width:96px} #intro{gap:10px} #intro .chips{display:none} }
   button.big{font-size:clamp(17px,2.2vw,22px);font-weight:800;padding:16px 34px;border-radius:999px;background:#ece8f2;color:#0b0910;border:0;box-shadow:0 0 40px #c9b6ff66;transition:transform .15s,box-shadow .15s}
   button.big:hover{transform:scale(1.04);box-shadow:0 0 60px #c9b6ffaa}
   #intro .alt a,#about a{color:#c9b6ff}
+  #intro .alt{position:relative;z-index:1}
   #intro .alt{font-size:14px}
   #intro .notes{font-size:12.5px;color:#8a8398;max-width:560px}
   #loading,#nocam{position:absolute;inset:0;z-index:38;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#05040af2;text-align:center;padding:24px}
