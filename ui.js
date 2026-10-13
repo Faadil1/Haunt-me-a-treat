@@ -213,7 +213,7 @@
     pg.save(); pg.beginPath(); pg.ellipse(MX, MY, RX, RY, 0, 0, 7); pg.clip();
     pg.fillStyle = '#0b0910'; pg.fillRect(0, 0, W, Hh);
     pg.save(); pg.translate(W, 0); pg.scale(-1, 1);
-    pg.filter = 'grayscale(1) sepia(.35) brightness(0.5) contrast(1.25)'; pg.drawImage(v, W - ox - dw, oy, dw, dh); pg.filter = 'none'; pg.restore();
+    pg.filter = 'grayscale(1) sepia(.35) brightness(0.82) contrast(1.15)'; pg.drawImage(v, W - ox - dw, oy, dw, dh); pg.filter = 'none'; pg.restore();
     const lm = h.lm, o = h.out;
     if (lm){
       const P = (i) => [ox + (1 - lm[i].x) * dw, oy + lm[i].y * dh];

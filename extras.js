@@ -286,7 +286,7 @@
     const shot = game.bestShot;
     if (shot){
       const sw = shot.width, sh = shot.height, crop = Math.min(sw, sh * 0.9);
-      const sx = (sw - crop) / 2, sy = Math.max(0, sh - crop * 0.95);
+      const sx = Math.max(0, (sw - crop) / 2 - sw * 0.075), sy = Math.max(0, sh - crop * 0.95);   // décalé à gauche : le fantôme reste dans le cadre
       g.save(); g.beginPath(); g.roundRect(90, 190, W - 180, W - 180, 28); g.clip();
       g.drawImage(shot, sx, sy, crop, crop * 0.95, 90, 190, W - 180, (W - 180) * 0.95);
       g.restore();
