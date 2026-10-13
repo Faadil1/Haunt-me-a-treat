@@ -270,15 +270,16 @@
     g.restore();
   }
 
-  function renderCard(){
-    const c = $('cardCanvas'), g = c.getContext('2d'), W = c.width, Hh = c.height;
+  let noBg = false;
+  function renderCard(target){
+    const c = target || $('cardCanvas'), g = c.getContext('2d'), W = c.width, Hh = c.height;
     const candies = game.candies;   // compté par la page (le compteur Rive n'est pas remis à zéro entre deux parties)
     const nScore = readVM('neighborScore');
     const grim = Math.round(game.best * 100);
     // fond
     const sky = g.createLinearGradient(0, 0, 0, Hh); sky.addColorStop(0, '#16112a'); sky.addColorStop(1, '#05040a');
     g.fillStyle = sky; g.fillRect(0, 0, W, Hh);
-    if (bg.complete && bg.naturalWidth){ g.globalAlpha = 0.55; const s = Hh * 0.62 / bg.naturalHeight; const bw = bg.naturalWidth * s; g.drawImage(bg, (W - bw) / 2, 150, bw, Hh * 0.62); g.globalAlpha = 1; }
+    if (!noBg && bg.complete && bg.naturalWidth){ g.globalAlpha = 0.55; const s = Hh * 0.62 / bg.naturalHeight; const bw = bg.naturalWidth * s; g.drawImage(bg, (W - bw) / 2, 150, bw, Hh * 0.62); g.globalAlpha = 1; }
     const v = g.createRadialGradient(W / 2, Hh * 0.5, Hh * 0.25, W / 2, Hh * 0.5, Hh * 0.75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.75)');
     g.fillStyle = v; g.fillRect(0, 0, W, Hh);
     // l'image : la vraie image Rive de ta pire grimace, sinon un fantôme dessiné avec tes valeurs
@@ -320,18 +321,39 @@
   function hideCard(){ card.style.display = 'none'; }
   $('cardClose').onclick = hideCard;
   $('cardAgain').onclick = () => { hideCard(); $('tourBtn') && $('tourBtn').click(); };
-  $('cardSave').onclick = () => $('cardCanvas').toBlob((b) => {
-    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'haunt-me-a-treat.png'; a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  }, 'image/png');
-  $('cardShare').onclick = () => $('cardCanvas').toBlob(async (b) => {
-    const file = new File([b], 'haunt-me-a-treat.png', { type: 'image/png' });
+  // Image de la carte. En local (file://), l'image de fond « salit » le canvas et toBlob est refusé :
+  // on redessine alors la carte sans le fond et on réessaie.
+  function cardBlob(cb){
+    const c = $('cardCanvas');
+    try { c.toBlob((b) => cb(b), 'image/png'); }
+    catch (e) {
+      // un canvas « sali » le reste : on redessine sur un canvas neuf, sans le fond
+      log('carte : fond refusé (' + e.name + '), redessinée sans le fond');
+      const t = document.createElement('canvas'); t.width = c.width; t.height = c.height;
+      noBg = true; renderCard(t); noBg = false;
+      try { t.toBlob((b) => cb(b), 'image/png'); } catch (e2) { log('carte : export impossible (' + e2.name + ')'); cb(null); }
+    }
+  }
+  function flash(id, txt){ const b = $(id); const old = b.dataset.label || (b.dataset.label = b.textContent); b.textContent = txt; setTimeout(() => { b.textContent = old; }, 2200); }
+  function saveBlob(b){
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'haunt-me-a-treat.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  $('cardSave').onclick = () => cardBlob((b) => { if (b) { saveBlob(b); flash('cardSave', 'Saved ✓'); } else flash('cardSave', 'Not available here'); });
+  $('cardShare').onclick = () => cardBlob(async (b) => {
+    const url = location.protocol.startsWith('http') ? location.href.split('?')[0] : 'https://faadil1.github.io/Haunt-me-a-treat/';
     const text = `My real face haunted the whole street: ${Math.round(game.best * 100)}/100 scare score. Haunt Me a Treat, made with @rive_app #RiveHalloweenChallenge`;
+    const file = b ? new File([b], 'haunt-me-a-treat.png', { type: 'image/png' }) : null;
     try {
-      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text, url: location.href.split('?')[0] });
-      else { await navigator.clipboard.writeText(text + ' ' + location.href.split('?')[0]); $('cardShare').textContent = 'Text copied!'; }
-    } catch {}
-  }, 'image/png');
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text, url }); return; }
+      if (navigator.share && window.isSecureContext) { await navigator.share({ text, url }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    // repli : on télécharge l'image et on copie le texte
+    if (b) saveBlob(b);
+    try { await navigator.clipboard.writeText(text + ' ' + url); flash('cardShare', 'Image saved · text copied ✓'); }
+    catch { flash('cardShare', b ? 'Image saved ✓' : 'Not available here'); }
+  });
 
   // bouton son (touche M)
   const hud = document.querySelector('.hud');
