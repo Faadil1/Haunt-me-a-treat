@@ -104,6 +104,7 @@
   #loading .bar{width:min(320px,70vw);height:4px;background:#221e2c;border-radius:4px;overflow:hidden}
   #loading .bar i{display:block;height:100%;width:35%;background:#c9b6ff;animation:slide 1.3s ease-in-out infinite}
   @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+  #filmgrain{position:absolute;inset:-50%;z-index:13;pointer-events:none;opacity:.075;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain .5s steps(4) infinite}
   #mini{position:absolute;top:12px;right:12px;z-index:16;display:none;gap:6px}
   #mini.on{display:flex}
   #mini.hide{display:none}
@@ -111,7 +112,7 @@
   #mini button:hover{opacity:1}
   body.dev #mini{top:60px}
   body.mouse #prompt{top:64px}body.mouse #sub{top:106px}
-  #pip{position:absolute;left:12px;bottom:12px;width:min(220px,30vw);height:auto;aspect-ratio:4/3;border-radius:12px;border:1px solid #c9b6ff55;box-shadow:0 8px 30px #000a;z-index:15;display:none}
+  #pip{position:absolute;left:14px;bottom:10px;width:min(170px,22vw);height:auto;aspect-ratio:240/336;z-index:15;display:none;filter:drop-shadow(0 10px 24px #000c)}
   #pip.on{display:block}
   #pip.hide{display:none}
   #about{position:absolute;inset:0;z-index:45;display:none;align-items:center;justify-content:center;background:#05040acc;backdrop-filter:blur(4px);padding:16px}
@@ -128,6 +129,7 @@
 <div id="app">
   <canvas id="previewCanvas" class="stage"></canvas>
   <canvas id="riveCanvas" class="stage"></canvas>
+  <div id="filmgrain"></div>
   <div id="prompt">Put on the sheet. Your face brings it to life.</div>
   <div id="sub"></div>
   <div id="privacy">Your webcam stays in your browser: no image is ever sent or saved. ⚠ Jump scares &amp; flashing lights.</div>

@@ -165,7 +165,7 @@
   // ===================================================================
   // 3. Miroir : ton visage et les points suivis, à la craie
   // ===================================================================
-  const pip = el(`<canvas id="pip" width="320" height="240" title="Your face drives the ghost"></canvas>`);
+  const pip = el(`<canvas id="pip" width="240" height="336" title="Your reflection drives the ghost"></canvas>`);
   app.appendChild(pip);
   let pipWanted = !/Mobi|Android/i.test(navigator.userAgent);
   $('mMirror').onclick = () => {
@@ -178,34 +178,62 @@
   const LIPS = [61, 40, 37, 0, 267, 270, 291, 321, 314, 17, 84, 91];
   const BROW_L = [70, 63, 105, 66, 107], BROW_R = [336, 296, 334, 293, 300];
   const pg = pip.getContext('2d');
+  // Le miroir hanté : un vieux miroir ovale, verre piqué et cerclé de laiton (il annonce la fin…)
+  const MX = 120, MY = 132, RX = 100, RY = 124;
+  const frame = document.createElement('canvas'); frame.width = pip.width; frame.height = pip.height;
+  (() => {
+    const f = frame.getContext('2d');
+    const ring = (rx, ry, w, a, b) => { const gr = f.createLinearGradient(0, MY - ry, 0, MY + ry); gr.addColorStop(0, a); gr.addColorStop(.5, b); gr.addColorStop(1, a); f.lineWidth = w; f.strokeStyle = gr; f.beginPath(); f.ellipse(MX, MY, rx, ry, 0, 0, 7); f.stroke(); };
+    f.shadowColor = '#000'; f.shadowBlur = 18; ring(RX + 7, RY + 7, 12, '#5b4422', '#d8b878'); f.shadowBlur = 0;
+    ring(RX + 7, RY + 7, 2, '#2a1f10', '#2a1f10'); ring(RX + 1, RY + 1, 2, '#f3dfae', '#8a6a36');
+    // petits ornements haut et bas
+    f.fillStyle = '#c9a866'; f.strokeStyle = '#3a2a12'; f.lineWidth = 1.5;
+    for (const [y, d] of [[MY - RY - 10, -1], [MY + RY + 10, 1]]){ f.beginPath(); f.moveTo(MX - 16, y); f.quadraticCurveTo(MX, y + d * 16, MX + 16, y); f.quadraticCurveTo(MX, y + d * 6, MX - 16, y); f.fill(); f.stroke(); f.beginPath(); f.arc(MX, y + d * 4, 4, 0, 7); f.fill(); f.stroke(); }
+    // une fêlure dans le verre
+    f.save(); f.beginPath(); f.ellipse(MX, MY, RX, RY, 0, 0, 7); f.clip();
+    f.strokeStyle = 'rgba(236,232,242,.35)'; f.lineWidth = 1; f.beginPath();
+    f.moveTo(MX + RX * 0.95, MY - RY * 0.45); f.lineTo(MX + 52, MY - 38); f.lineTo(MX + 61, MY - 20); f.lineTo(MX + 30, MY + 6);
+    f.moveTo(MX + 52, MY - 38); f.lineTo(MX + 34, MY - 62); f.moveTo(MX + 61, MY - 20); f.lineTo(MX + 88, MY + 4); f.stroke();
+    // piqûres et reflet
+    for (let i = 0; i < 70; i++){ const a = Math.random() * 6.28, r = Math.sqrt(Math.random()); const x = MX + Math.cos(a) * RX * r, y = MY + Math.sin(a) * RY * r; f.fillStyle = `rgba(${Math.random() < .5 ? '20,16,10' : '230,220,200'},${0.05 + Math.random() * 0.12})`; f.beginPath(); f.arc(x, y, 0.6 + Math.random() * 1.8 * (r > .8 ? 2 : 1), 0, 7); f.fill(); }
+    const sh = f.createLinearGradient(MX - RX, MY - RY, MX + RX, MY + RY); sh.addColorStop(0, 'rgba(255,255,255,.10)'); sh.addColorStop(.35, 'rgba(255,255,255,0)'); f.fillStyle = sh; f.fillRect(0, 0, frame.width, frame.height);
+    const vg = f.createRadialGradient(MX, MY, RY * 0.5, MX, MY, RY * 1.05); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(10,6,2,.7)'); f.fillStyle = vg; f.fillRect(0, 0, frame.width, frame.height);
+    f.restore();
+  })();
   function drawPip(){
     requestAnimationFrame(drawPip);
     if (!pip.classList.contains('on')) return;
     const h = H(); if (!h || !h.video || !h.video.videoWidth) return;
     const v = h.video, W = pip.width, Hh = pip.height;
-    const s = Math.max(W / v.videoWidth, Hh / v.videoHeight), dw = v.videoWidth * s, dh = v.videoHeight * s, ox = (W - dw) / 2, oy = (Hh - dh) / 2;
+    pg.clearRect(0, 0, W, Hh);
+    // zone du verre (on cadre le visage dans l'ovale)
+    const bw = RX * 2.3, bh = RY * 2.05;
+    const s = Math.max(bw / v.videoWidth, bh / v.videoHeight), dw = v.videoWidth * s, dh = v.videoHeight * s, ox = MX - dw / 2, oy = MY - dh / 2;
+    pg.save(); pg.beginPath(); pg.ellipse(MX, MY, RX, RY, 0, 0, 7); pg.clip();
+    pg.fillStyle = '#0b0910'; pg.fillRect(0, 0, W, Hh);
     pg.save(); pg.translate(W, 0); pg.scale(-1, 1);
-    pg.filter = 'grayscale(1) brightness(0.45) contrast(1.2)'; pg.drawImage(v, ox, oy, dw, dh); pg.filter = 'none'; pg.restore();
-    const lm = h.lm;
+    pg.filter = 'grayscale(1) sepia(.35) brightness(0.5) contrast(1.25)'; pg.drawImage(v, W - ox - dw, oy, dw, dh); pg.filter = 'none'; pg.restore();
+    const lm = h.lm, o = h.out;
     if (lm){
       const P = (i) => [ox + (1 - lm[i].x) * dw, oy + lm[i].y * dh];
       const line = (idx, close, col, w) => { pg.beginPath(); idx.forEach((i, k) => { const [x, y] = P(i); k ? pg.lineTo(x, y) : pg.moveTo(x, y); }); if (close) pg.closePath(); pg.strokeStyle = col; pg.lineWidth = w; pg.stroke(); };
-      const o = h.out;
-      pg.save(); pg.shadowColor = '#c9b6ff'; pg.shadowBlur = 6;
-      line(OVAL, true, 'rgba(201,182,255,.55)', 1.5);
+      pg.shadowColor = '#c9b6ff'; pg.shadowBlur = 6;
+      line(OVAL, true, 'rgba(201,182,255,.45)', 1.5);
       line(BROW_L, false, '#c9b6ff', 2); line(BROW_R, false, '#c9b6ff', 2);
       line(EYE_L, true, '#ece8f2', 2); line(EYE_R, true, '#ece8f2', 2);
       line(LIPS, true, o.faceScary > 0.6 ? '#ff6b5e' : o.faceSmile > 0.5 ? '#7fd18b' : '#ffb35c', 2.5);
-      pg.restore();
-      // jauges
-      const bars = [['MOUTH', o.faceJaw, '#ffb35c'], ['SMILE', o.faceSmile, '#7fd18b'], ['SCARE', o.faceScary, '#ff6b5e']];
-      bars.forEach(([n, val, c], i) => {
-        const y = Hh - 14 - i * 16;
-        pg.fillStyle = '#0009'; pg.fillRect(70, y - 8, W - 82, 8);
-        pg.fillStyle = c; pg.fillRect(70, y - 8, (W - 82) * Math.max(0, Math.min(1, val)), 8);
-        pg.fillStyle = '#ece8f2'; pg.font = '700 10px system-ui'; pg.fillText(n, 10, y);
-      });
-    } else { pg.fillStyle = '#ece8f2'; pg.font = '700 13px system-ui'; pg.textAlign = 'center'; pg.fillText('Face not found', W / 2, Hh / 2); pg.textAlign = 'left'; }
+      pg.shadowBlur = 0;
+    } else { pg.fillStyle = '#ece8f2'; pg.font = 'italic 15px Georgia, serif'; pg.textAlign = 'center'; pg.fillText('…where did you go?', MX, MY); pg.textAlign = 'left'; }
+    pg.restore();
+    pg.drawImage(frame, 0, 0);
+    // jauges sous le miroir
+    const bars = [['MOUTH', o.faceJaw, '#ffb35c'], ['SMILE', o.faceSmile, '#7fd18b'], ['SCARE', o.faceScary, '#ff6b5e']];
+    bars.forEach(([n, val, c], i) => {
+      const y = Hh - 40 + i * 14;
+      pg.fillStyle = '#0b0910cc'; pg.fillRect(62, y - 7, W - 76, 7);
+      pg.fillStyle = c; pg.fillRect(62, y - 7, (W - 76) * Math.max(0, Math.min(1, val || 0)), 7);
+      pg.fillStyle = '#ece8f2'; pg.font = '700 9.5px system-ui'; pg.fillText(n, 16, y);
+    });
   }
   requestAnimationFrame(drawPip);
   // le miroir se cache pendant la finale et la carte
