@@ -30,14 +30,14 @@ And then… don't look at your reflection. 🪞
 **How it's built**
 • **Rive State Machine** runs the whole night: 4 doors, hold timers, fail states, the ending — all thresholds live in Rive, not in code.
 • **Data Binding**: 12 face values (jaw, smile, brows, blinks, gaze, head pose, a combined scare score) stream into a Rive View Model every frame. MediaPipe reads your face locally; a 2.5 s neutral calibration adapts every threshold to *your* face.
-• **Luau scripting** for the game counters **[IF]** and the shader driver.
-• **[IF] GPU Canvas (WGSL)**: one custom shader paints the night — a porch lamp that flickers harder the scarier you are, moonlight dust, mist that parts around the sheet, and a blood-red reveal driven by the State Machine.
-• **[IF] Rive CLI + RML**: an agent wrote [component] in RML with the CLI's live preview, `rive --screenshot`/`--data` to test door states headless, then I refined it by hand in the Editor.
+• **Luau scripting**: a node script drives the shader from the View Model, another keeps the candy counters.
+• **GPU Canvas (WGSL)**: one custom shader paints the night — a porch lamp that flickers harder the scarier you are, moonlight dust, mist that parts around the sheet, and a blood-red reveal driven by the State Machine.
+• **Rive CLI + RML**: an AI agent wrote the candy-counter HUD in RML, checked it with headless `rive --screenshot` renders, then `rive push` and `--publish` produced the .riv used in the game. The rest of the scene I built and refined by hand in the Editor.
+• **Your face is never shown raw**: the on-screen mirror disguises you (huge eyes, stitched mouth, a gash, blood) and gets worse door after door. Hide it any time with H.
 • Night porches rendered in Blender; characters from Open Peeps (CC0), rigged and animated by hand in Rive.
 • The webcam never leaves your browser. Nothing is uploaded or stored.
 
 ▶️ Play (webcam, or mouse/keyboard if you have no camera): https://faadil1.github.io/Haunt-me-a-treat/
-▶️ [IF] Rive link: **[PASTE]**
 🎬 Process video: **[PASTE]**
 
 Best with headphones. ⚠️ Jump scares & flashing lights.
