@@ -272,6 +272,40 @@
   $('aboutClose').onclick = () => about.classList.remove('on');
   about.onclick = (e) => { if (e.target === about) about.classList.remove('on'); };
 
+  // ===================================================================
+  // 8. Mode tournage (?film=1) : ton visage à gauche, le fantôme à droite, pour filmer l'écran sans montage
+  // ===================================================================
+  if (Q.get('film') === '1'){
+    document.body.classList.add('film');
+    const fc = el(`<div id="filmCam"><canvas></canvas><div class="lab">YOUR FACE</div></div>`);
+    document.body.insertBefore(fc, app);
+    const lab = el(`<div id="filmLab">THE GHOST</div>`); app.appendChild(lab);
+    const cv = fc.querySelector('canvas'), g = cv.getContext('2d');
+    const fit = () => { const d = devicePixelRatio || 1; cv.width = fc.clientWidth * d; cv.height = fc.clientHeight * d; };
+    fit(); addEventListener('resize', fit); setTimeout(() => dispatchEvent(new Event('resize')), 50);
+    (function draw(){
+      requestAnimationFrame(draw);
+      const h = H(), v = h && h.video; const W = cv.width, Hh = cv.height;
+      g.fillStyle = '#05040a'; g.fillRect(0, 0, W, Hh);
+      if (!v || !v.videoWidth){ g.fillStyle = '#8a8398'; g.font = `${Math.round(W / 22)}px Georgia, serif`; g.textAlign = 'center'; g.fillText('your face appears here', W / 2, Hh / 2); return; }
+      const s = Math.max(W / v.videoWidth, Hh / v.videoHeight), dw = v.videoWidth * s, dh = v.videoHeight * s, ox = (W - dw) / 2, oy = (Hh - dh) / 2;
+      g.save(); g.translate(W, 0); g.scale(-1, 1); g.filter = 'contrast(1.08) saturate(.85) brightness(.95)'; g.drawImage(v, W - ox - dw, oy, dw, dh); g.restore(); g.filter = 'none';
+      const lm = h.lm, o = h.out || {};
+      if (lm){
+        const P = (i) => [ox + (1 - lm[i].x) * dw, oy + lm[i].y * dh];
+        const line = (idx, close, col, w) => { g.beginPath(); idx.forEach((i, k) => { const [x, y] = P(i); k ? g.lineTo(x, y) : g.moveTo(x, y); }); if (close) g.closePath(); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
+        const d = devicePixelRatio || 1;
+        g.save(); g.shadowColor = '#c9b6ff'; g.shadowBlur = 8 * d; g.globalAlpha = .8;
+        line(EYE_L, true, '#ece8f2', 1.6 * d); line(EYE_R, true, '#ece8f2', 1.6 * d);
+        line(BROW_L, false, '#c9b6ff', 1.8 * d); line(BROW_R, false, '#c9b6ff', 1.8 * d);
+        line(LIPS, true, o.faceScary > 0.6 ? '#ff6b5e' : o.faceSmile > 0.5 ? '#7fd18b' : '#ffb35c', 2.4 * d);
+        g.restore();
+      }
+      // vignette
+      const vg = g.createRadialGradient(W / 2, Hh / 2, Math.min(W, Hh) * .35, W / 2, Hh / 2, Math.max(W, Hh) * .75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(5,4,10,.75)'); g.fillStyle = vg; g.fillRect(0, 0, W, Hh);
+    })();
+  }
+
   // Le bouton son créé par extras.js part dans la mini-barre (la barre de dev est cachée)
   setTimeout(syncSound, 500);
 })();
