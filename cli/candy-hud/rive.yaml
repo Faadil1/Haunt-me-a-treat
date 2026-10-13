@@ -1,0 +1,7 @@
+name: candy-hud
+logs:
+  file: build/rive.log
+  problems: build/problems.log
+push:
+  projectId: 2018710
+  fileId: 2647952
