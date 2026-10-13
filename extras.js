@@ -114,6 +114,22 @@
       noiseHit(t, { f: 2500, q: 0.4, a: 0.002, d: 0.7, vol: 0.9, sweepTo: 300 });
       SFX.scream();
       if (ambGain) ambGain.gain.setTargetAtTime(0.06, t + 4, 1.5); },
+    // ---- le miroir se blesse : sons de chair, de fil, d'os et de verre ----
+    stitch(){ const t = ac.currentTime; for (let i = 0; i < 7; i++){ noiseHit(t + i * 0.09, { f: 4200, q: 3, type: 'bandpass', a: 0.001, d: 0.04, vol: 0.35 }); tone(t + i * 0.09, { f: 1800, to: 900, type: 'triangle', a: 0.001, d: 0.05, vol: 0.12 }); }
+      noiseHit(t + 0.7, { f: 700, q: 1.5, a: 0.02, d: 0.25, vol: 0.25 }); },
+    squelch(){ const t = ac.currentTime; noiseHit(t, { f: 300, sweepTo: 90, q: 6, a: 0.01, d: 0.35, vol: 0.9 }); tone(t, { f: 160, to: 55, type: 'sawtooth', a: 0.005, d: 0.3, vol: 0.3, vib: 30 });
+      noiseHit(t + 0.14, { f: 500, sweepTo: 150, q: 8, a: 0.01, d: 0.22, vol: 0.55 }); [0.3, 0.42, 0.5].forEach((d) => tone(t + d, { f: 900 - d * 600, to: 200, a: 0.002, d: 0.05, vol: 0.12 })); },
+    crack(){ const t = ac.currentTime; noiseHit(t, { f: 3000, q: 0.5, type: 'highpass', a: 0.001, d: 0.06, vol: 0.9 }); tone(t, { f: 220, to: 60, type: 'square', a: 0.001, d: 0.12, vol: 0.5 });
+      noiseHit(t + 0.18, { f: 2000, q: 0.5, type: 'highpass', a: 0.001, d: 0.05, vol: 0.7 }); tone(t + 0.18, { f: 300, to: 80, type: 'square', a: 0.001, d: 0.09, vol: 0.4 });
+      [0, 0.05, 0.11].forEach((d, i) => tone(t + 0.3 + d, { f: 2400 + i * 700, type: 'triangle', a: 0.001, d: 0.6, vol: 0.1 })); },
+    glass(){ const t = ac.currentTime; noiseHit(t, { f: 6000, q: 0.4, type: 'highpass', a: 0.001, d: 0.5, vol: 0.7 }); for (let i = 0; i < 9; i++) tone(t + Math.random() * 0.4, { f: 2500 + Math.random() * 4000, type: 'triangle', a: 0.001, d: 0.3 + Math.random() * 0.4, vol: 0.07 }); },
+    drip(){ const t = ac.currentTime + Math.random() * 0.05, f = 600 + Math.random() * 500; tone(t, { f: f * 1.6, to: f * 0.7, a: 0.002, d: 0.09, vol: 0.2 }); noiseHit(t, { f: 1500, q: 4, a: 0.001, d: 0.03, vol: 0.06 }); },
+    hush(){ const t = ac.currentTime; noiseHit(t, { f: 1800, q: 3, a: 1.0, d: 2.0, vol: 0.12, sweepTo: 700 }); },
+    // un murmure qui ressemble à une voix : bruit filtré par deux formants qui glissent
+    whisper(){ const t = ac.currentTime + 0.05; for (let i = 0; i < 4; i++){ const d = t + i * 0.28 + Math.random() * 0.06, f = 900 + Math.random() * 900;
+        noiseHit(d, { f, to: 0, sweepTo: f * (0.6 + Math.random() * 0.8), q: 7, a: 0.08, d: 0.2, vol: 0.2 }); noiseHit(d, { f: f * 2.4, sweepTo: f * 1.8, q: 9, a: 0.08, d: 0.18, vol: 0.1 }); } },
+    // niveau d'horreur (0-5) : règle les bruits d'ambiance (gouttes, murmures, battements)
+    level(n){ horror = n; },
     win(){ const t = ac.currentTime + 1.2; [523, 659, 784, 1046].forEach((f, i) => tone(t + i * 0.1, { f, type: 'triangle', a: 0.01, d: 0.6, vol: 0.12 })); },
   };
   const sfx = (n, ...args) => { if (audio() && ac.state === 'running') try { SFX[n](...args); } catch (e) { log('son : ' + e.message); } };
@@ -174,7 +190,23 @@
   // ===================================================================
   const game = { candies: 0, best: 0, bestFace: null, bestShot: null, outcome: null, scoreVoisin: 0, lastShot: 0, playing: false };
 
-  window.HMAT_GAME = game;   // lu par hud.js (le compteur de bonbons fait avec la Rive CLI)
+  window.HMAT_GAME = game;
+  // Ambiance vivante : plus on avance, plus le miroir et la nuit font de bruit
+  let horror = 0, beatT = null;
+  setInterval(() => {
+    if (!ac || ac.state !== 'running' || muted || !game.playing || horror < 1 || (window.HMAT_FINALE && window.HMAT_FINALE.active)) return;
+    if (Math.random() < 0.35 + horror * 0.1) sfx('drip');
+    if (Math.random() < 0.06 * horror) sfx('whisper');
+    if (horror >= 3 && Math.random() < 0.08) sfx('hush');
+  }, 2200);
+  (function beat(){
+    const bpm = 58 + horror * 14;
+    if (ac && ac.state === 'running' && !muted && game.playing && horror >= 2 && !(window.HMAT_FINALE && window.HMAT_FINALE.active)){
+      const t = ac.currentTime, v = 0.12 + horror * 0.07; tone(t, { f: 58, to: 38, a: 0.004, d: 0.14, vol: v }); tone(t + 0.2, { f: 50, to: 36, a: 0.004, d: 0.16, vol: v * 0.7 });
+    }
+    setTimeout(beat, 60000 / bpm);
+  })();
+   // lu par hud.js (le compteur de bonbons fait avec la Rive CLI)
   addEventListener('hmat:state', (e) => {
     for (const raw of e.detail){
       const s = String(raw).toLowerCase();

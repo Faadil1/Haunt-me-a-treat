@@ -135,7 +135,7 @@
     if (H()) H().out.webcamMode = true;
     if ($('tourBtn')) setTimeout(() => $('tourBtn').click(), 400);
   }
-  function afterCam(){ document.body.classList.add('cam'); showMini(); if (pipWanted) pip.classList.add('on'); }
+  function afterCam(){ document.body.classList.add('cam'); showMini(); if (window.__setMirror) window.__setMirror(window.__pipWanted ? window.__pipWanted() : true, false); }
   $('startBtn') && ($('startBtn').onclick = begin);
   $('mouseLink') && ($('mouseLink').onclick = (e) => { e.preventDefault(); mouseMode(); });
 
@@ -145,7 +145,7 @@
   const mini = el(`
   <div id="mini">
     <button id="mSound" title="Sound (M)">🔊</button>
-    <button id="mMirror" title="Show my face tracking">🪞</button>
+    <button id="mMirror" title="Hide the mirror (H)">🪞</button>
     <button id="mRecal" title="Recalibrate (neutral face)">↺</button>
     <button id="mFull" title="Fullscreen">⛶</button>
     <button id="mAbout" title="How it's made">?</button>
@@ -169,11 +169,23 @@
   const pip = el(`<canvas id="pip" width="240" height="336" title="Your reflection drives the ghost"></canvas>`);
   app.appendChild(pip);
   let pipWanted = !/Mobi|Android/i.test(navigator.userAgent);
-  $('mMirror').onclick = () => {
-    pipWanted = !pipWanted;
-    pip.classList.toggle('on', pipWanted && !!(H() && H().video && H().video.srcObject));
-    $('mMirror').classList.toggle('off', !pipWanted);
-  };
+  try { const sv = localStorage.getItem('hmat_mirror'); if (sv === '0') pipWanted = false; else if (sv === '1') pipWanted = true; } catch {}
+  const pipX = el(`<button id="pipX" title="Hide the mirror (H)">×</button>`);
+  app.appendChild(pipX);
+  function setMirror(on, save){
+    pipWanted = on;
+    if (save) try { localStorage.setItem('hmat_mirror', on ? '1' : '0'); } catch {}
+    const cam = !!(H() && H().video && H().video.srcObject);
+    pip.classList.toggle('on', on && cam);
+    pipX.classList.toggle('on', on && cam);
+    $('mMirror').classList.toggle('off', !on);
+    $('mMirror').title = on ? 'Hide the mirror (H)' : 'Show the mirror (H)';
+  }
+  $('mMirror').onclick = () => setMirror(!pipWanted, true);
+  pipX.onclick = () => setMirror(false, true);
+  addEventListener('keydown', (e) => { if (e.key.toLowerCase() === 'h' && !e.ctrlKey && !e.metaKey && !/input|textarea/i.test((e.target || {}).tagName || '')) setMirror(!pipWanted, true); });
+  $('mMirror').classList.toggle('off', !pipWanted);
+  window.__setMirror = setMirror; window.__pipWanted = () => pipWanted;
   const OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
   const EYE_L = [33, 160, 158, 133, 153, 144], EYE_R = [362, 385, 387, 263, 373, 380];
   const LIPS = [61, 40, 37, 0, 267, 270, 291, 321, 314, 17, 84, 91];
@@ -201,6 +213,105 @@
     const vg = f.createRadialGradient(MX, MY, RY * 0.5, MX, MY, RY * 1.05); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(10,6,2,.7)'); f.fillStyle = vg; f.fillRect(0, 0, frame.width, frame.height);
     f.restore();
   })();
+
+  // ---------------------------------------------------------------
+  // Le miroir te DÉGUISE : jamais ton vrai visage, toujours un monstre qui se blesse porte après porte.
+  // (Pour les timides : l'écran ne montre pas ton visage à 100 %, et on peut cacher le miroir avec H.)
+  // ---------------------------------------------------------------
+  let stage = 0; const born = {};
+  const setStage = (n) => { if (n === stage) return; const up = n > stage; stage = n; if (n === 0){ for (const k in born) delete born[k]; return; }
+    if (up){ born[n] = performance.now(); const S = window.HMAT_SFX; if (S) S(['', 'stitch', 'squelch', 'crack', 'drip', 'hush'][Math.min(n, 5)]); } };
+  addEventListener('hmat:state', (e) => {
+    for (const raw of e.detail){
+      const t = String(raw).toLowerCase(); let m;
+      if (/enfiler|drap_tombe/.test(t)) setStage(0);
+      else if (/revel|reflet|vitre|twist/.test(t)) setStage(5);
+      else if ((m = t.match(/^porte(\d)/))) setStage(Math.max(stage, Math.min(4, +m[1])));
+      else if (/^fin/.test(t)) setStage(Math.max(stage, 4));
+    }
+  });
+  if (/[?&]stage=(\d)/.test(location.search)) setTimeout(() => { for (let i = 1; i <= +RegExp.$1; i++) setStage(i); }, 300);
+  window.HMAT_MIRROR_STAGE = (n) => { for (let i = 1; i <= n; i++) setStage(i); };
+  const rnd = (() => { let a = 7; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
+  const splats = Array.from({ length: 22 }, () => ({ a: rnd() * 6.28, r: 0.55 + rnd() * 0.5, s: 2 + rnd() * 7, k: 1 + Math.floor(rnd() * 4) }));
+  const age = (k, now) => born[k] ? Math.min(1, (now - born[k]) / 700) : (stage >= k ? 1 : 0);
+  const drip = (x, y, len, w, col) => { if (len < 1) return; const g = pg.createLinearGradient(0, y, 0, y + len); g.addColorStop(0, col); g.addColorStop(1, '#3a0508'); pg.strokeStyle = g; pg.lineWidth = w; pg.lineCap = 'round'; pg.beginPath(); pg.moveTo(x, y); pg.lineTo(x + Math.sin(len * 0.05) * 1.2, y + len); pg.stroke(); pg.fillStyle = '#6e0a10'; pg.beginPath(); pg.arc(x + Math.sin(len * 0.05) * 1.2, y + len, w * 0.85, 0, 7); pg.fill(); pg.lineCap = 'butt'; };
+  function costume(P, lm, now){
+    const D = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const u = D(P(234), P(454));                          // largeur du visage
+    const eyeC = (ids) => { let x = 0, y = 0; ids.forEach((i) => { const p = P(i); x += p[0]; y += p[1]; }); return [x / ids.length, y / ids.length]; };
+    const eL = eyeC(EYE_L), eR = eyeC(EYE_R);
+    const open = (a, b, c, d) => Math.max(0, Math.min(1, D(P(a), P(b)) / D(P(c), P(d)) / 0.28));
+    const oL = open(159, 145, 33, 133), oR = open(386, 374, 362, 263);
+    const blood = '#9b0b14', dark = '#1a0a0c';
+    const t = now / 1000;
+    // peau : une couche verdâtre, bleuie sous les yeux (on ne reconnaît plus personne)
+    pg.save(); pg.beginPath(); OVAL.forEach((i, k) => { const p = P(i); k ? pg.lineTo(p[0], p[1]) : pg.moveTo(p[0], p[1]); }); pg.closePath();
+    pg.fillStyle = `rgba(70,110,60,${0.28 + stage * 0.04})`; pg.fill(); pg.restore();
+    // cernes
+    [eL, eR].forEach((c) => { const g = pg.createRadialGradient(c[0], c[1] + u * 0.03, u * 0.03, c[0], c[1] + u * 0.03, u * 0.2); g.addColorStop(0, 'rgba(40,10,50,.7)'); g.addColorStop(1, 'rgba(40,10,50,0)'); pg.fillStyle = g; pg.fillRect(c[0] - u * 0.25, c[1] - u * 0.2, u * 0.5, u * 0.5); });
+    // GROS YEUX noirs qui clignent comme les tiens ; une pupille blanche qui te suit
+    const iris = (c, idx) => { const q = lm[idx]; return q ? [(c[0] - P(idx)[0]) * 1.8, (c[1] - P(idx)[1]) * -0 ] : [0, 0]; };
+    const bigEye = (c, o, which) => {
+      const pulse = 1 + Math.sin(t * 2.2 + which) * 0.04;
+      const rx = u * 0.135 * pulse, ry = u * 0.175 * (0.15 + 0.85 * o) * pulse;
+      pg.fillStyle = '#050305'; pg.shadowColor = '#000'; pg.shadowBlur = 8; pg.beginPath(); pg.ellipse(c[0], c[1], rx, Math.max(ry, 1.5), 0, 0, 7); pg.fill(); pg.shadowBlur = 0;
+      pg.strokeStyle = 'rgba(155,11,20,.8)'; pg.lineWidth = 1.2;
+      for (let k = 0; k < 7; k++){ const a = k * 0.9 + which; pg.beginPath(); pg.moveTo(c[0] + Math.cos(a) * rx * 0.95, c[1] + Math.sin(a) * ry * 0.95); pg.lineTo(c[0] + Math.cos(a) * rx * 1.35, c[1] + Math.sin(a) * ry * 1.35); pg.stroke(); }
+      const gx = lm[473] && which ? (P(473)[0] - c[0]) : lm[468] && !which ? (P(468)[0] - c[0]) : 0;
+      pg.fillStyle = '#f4ecdf'; pg.beginPath(); pg.arc(c[0] + Math.max(-rx * 0.4, Math.min(rx * 0.4, gx * 2)), c[1], Math.max(1.2, u * 0.028 * o), 0, 7); pg.fill();
+    };
+    // œil gauche : devient un bouton cousu à partir de la porte 3
+    const a3 = age(3, now);
+    if (stage >= 3){
+      pg.fillStyle = '#d9cdb4'; pg.strokeStyle = dark; pg.lineWidth = 2; pg.beginPath(); pg.arc(eL[0], eL[1], u * 0.1 * a3, 0, 7); pg.fill(); pg.stroke();
+      pg.fillStyle = dark; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([dx, dy]) => { pg.beginPath(); pg.arc(eL[0] + dx * u * 0.03, eL[1] + dy * u * 0.03, 1.6, 0, 7); pg.fill(); });
+      pg.strokeStyle = dark; pg.lineWidth = 2.2; pg.beginPath(); pg.moveTo(eL[0] - u * 0.07, eL[1] - u * 0.07); pg.lineTo(eL[0] + u * 0.07, eL[1] + u * 0.07); pg.moveTo(eL[0] + u * 0.07, eL[1] - u * 0.07); pg.lineTo(eL[0] - u * 0.07, eL[1] + u * 0.07); pg.stroke();
+    } else bigEye(eL, oL, 0);
+    bigEye(eR, oR, 1);
+    // larme de sang (porte 3+)
+    if (stage >= 3) drip(eR[0] + u * 0.02, eR[1] + u * 0.05, Math.min(u * 0.6, (now - (born[3] || now - 9e3)) * 0.02), 3, blood);
+    // bouche cousue (porte 1+) : les points s'écartent quand tu cries
+    const a1 = age(1, now);
+    if (stage >= 1){
+      const c1 = P(61), c2 = P(291), up = P(13), lo = P(14), cx = (c1[0] + c2[0]) / 2, my = (up[1] + lo[1]) / 2;
+      const op = Math.max(0, lo[1] - up[1]);
+      pg.fillStyle = '#16050a'; pg.beginPath(); pg.moveTo(c1[0], c1[1]); pg.quadraticCurveTo(cx, up[1] - u * 0.02, c2[0], c2[1]); pg.quadraticCurveTo(cx, lo[1] + u * 0.02, c1[0], c1[1]); pg.fill();
+      pg.strokeStyle = '#d8ccb4'; pg.lineWidth = 1.8; const N = 9;
+      for (let k = 1; k < N; k++){ const f = k / N, x = c1[0] + (c2[0] - c1[0]) * f, yc = c1[1] + (c2[1] - c1[1]) * f + (my - (c1[1] + c2[1]) / 2) * Math.sin(Math.PI * f);
+        const h = (u * 0.045 + op * 0.5 * Math.sin(Math.PI * f)) * a1; pg.beginPath(); pg.moveTo(x - 1.5, yc - h); pg.lineTo(x + 1.5, yc + h); pg.stroke(); }
+      pg.strokeStyle = blood; pg.lineWidth = 1.2; for (let k = 1; k < N; k += 2){ const f = k / N; pg.beginPath(); pg.arc(c1[0] + (c2[0] - c1[0]) * f, my + u * 0.05, 1.4, 0, 7); pg.stroke(); }
+      drip(c1[0] + (c2[0] - c1[0]) * 0.3, my + u * 0.05, Math.min(u * 0.45, (now - (born[1] || now - 9e3)) * 0.012), 2.4, blood);
+    }
+    // balafre sur la joue (porte 2+) avec points de suture et un filet de sang qui descend
+    const a2 = age(2, now);
+    if (stage >= 2){
+      const A = P(50), B = P(205), C = P(216), dx = C[0] - A[0];
+      const x0 = A[0] - u * 0.06, y0 = A[1] - u * 0.04, x1 = B[0] + u * 0.1, y1 = B[1] + u * 0.12;
+      const pts = []; for (let k = 0; k <= 12; k++){ const f = k / 12 * a2; pts.push([x0 + (x1 - x0) * f + (k % 2 ? 2 : -2), y0 + (y1 - y0) * f + (k % 2 ? -2 : 2)]); }
+      pg.lineJoin = 'round'; pg.strokeStyle = '#4a0610'; pg.lineWidth = 7; pg.beginPath(); pts.forEach((p, i) => i ? pg.lineTo(p[0], p[1]) : pg.moveTo(p[0], p[1])); pg.stroke();
+      pg.strokeStyle = blood; pg.lineWidth = 4; pg.stroke(); pg.strokeStyle = '#e9b6a8'; pg.lineWidth = 1; pg.stroke();
+      pg.strokeStyle = '#e8dcc4'; pg.lineWidth = 1.6; for (let k = 1; k < pts.length - 1; k += 2){ const p = pts[k]; pg.beginPath(); pg.moveTo(p[0] - 5, p[1] - 5); pg.lineTo(p[0] + 5, p[1] + 5); pg.stroke(); }
+      drip(pts[Math.max(1, pts.length - 2)][0], pts[Math.max(1, pts.length - 2)][1], Math.min(u * 0.7, (now - (born[2] || now - 9e3)) * 0.014), 3.2, blood);
+    }
+    // crâne fêlé au front + sang dans les sourcils (porte 3+)
+    if (stage >= 3){
+      const f = P(10), g = P(9), L = u * 0.28 * a3; pg.strokeStyle = dark; pg.lineWidth = 2.6; pg.beginPath(); pg.moveTo(f[0] + u * 0.03, f[1] + u * 0.02);
+      for (let k = 1; k <= 6; k++) pg.lineTo(f[0] + (k % 2 ? 7 : -7) + u * 0.03, f[1] + u * 0.02 + (L / 6) * k); pg.stroke();
+      pg.strokeStyle = '#d8ccb4'; pg.lineWidth = 0.9; pg.stroke();
+      drip(f[0] + u * 0.1, f[1] + u * 0.05, Math.min(u * 0.5, (now - (born[3] || now - 9e3)) * 0.013), 2.6, blood);
+    }
+    // porte 4 : le visage coule (rideau de sang qui tombe du haut du verre), mâchoire noire, gros plan
+    if (stage >= 4){
+      const a4 = age(4, now);
+      for (let k = 0; k < 9; k++){ const x = MX - RX + 14 + k * 22 + (k % 2) * 6, L = (30 + (k * 37) % 70) * a4 + (now - (born[4] || now)) * 0.008 * ((k % 3) + 1); drip(x, MY - RY, Math.min(L, RY * 1.5), 3 + (k % 3), blood); }
+      pg.fillStyle = `rgba(10,0,0,${0.35 * a4})`; pg.fillRect(0, 0, pip.width, pip.height);
+    }
+    // éclaboussures sur la vitre qui s'ajoutent à chaque porte
+    splats.forEach((sp) => { if (sp.k > stage) return; pg.fillStyle = 'rgba(120,8,14,.85)'; const x = MX + Math.cos(sp.a) * RX * sp.r, y = MY + Math.sin(sp.a) * RY * sp.r; pg.beginPath(); pg.arc(x, y, sp.s, 0, 7); pg.fill(); for (let k = 0; k < 4; k++){ pg.beginPath(); pg.arc(x + Math.cos(sp.a * 9 + k * 2) * sp.s * 2, y + Math.sin(sp.a * 9 + k * 2) * sp.s * 2, sp.s * 0.35, 0, 7); pg.fill(); } });
+    // révélation : le visage s'efface, il ne reste que les yeux (« il n'y avait personne »)
+    if (stage >= 5){ const a5 = age(5, now); pg.fillStyle = `rgba(7,5,10,${0.9 * a5})`; pg.fillRect(0, 0, pip.width, pip.height); [eL, eR].forEach((c) => { pg.fillStyle = '#050305'; pg.beginPath(); pg.ellipse(c[0], c[1], u * 0.13, u * 0.17, 0, 0, 7); pg.fill(); pg.strokeStyle = '#f4ecdf'; pg.lineWidth = 2; pg.stroke(); }); }
+  }
   function drawPip(){
     requestAnimationFrame(drawPip);
     if (!pip.classList.contains('on')) return;
@@ -213,7 +324,7 @@
     pg.save(); pg.beginPath(); pg.ellipse(MX, MY, RX, RY, 0, 0, 7); pg.clip();
     pg.fillStyle = '#0b0910'; pg.fillRect(0, 0, W, Hh);
     pg.save(); pg.translate(W, 0); pg.scale(-1, 1);
-    pg.filter = 'grayscale(1) sepia(.35) brightness(0.82) contrast(1.15)'; pg.drawImage(v, W - ox - dw, oy, dw, dh); pg.filter = 'none'; pg.restore();
+    pg.filter = stage >= 4 ? 'grayscale(.9) sepia(.8) hue-rotate(-30deg) saturate(2.5) brightness(.95) contrast(1.35) blur(1.1px)' : 'grayscale(.75) sepia(.6) hue-rotate(35deg) saturate(1.8) brightness(1.05) contrast(1.25) blur(.7px)'; pg.drawImage(v, W - ox - dw, oy, dw, dh); pg.filter = 'none'; pg.restore();
     const lm = h.lm, o = h.out;
     if (lm){
       const P = (i) => [ox + (1 - lm[i].x) * dw, oy + lm[i].y * dh];
@@ -221,9 +332,9 @@
       pg.shadowColor = '#c9b6ff'; pg.shadowBlur = 6;
       line(OVAL, true, 'rgba(201,182,255,.45)', 1.5);
       line(BROW_L, false, '#c9b6ff', 2); line(BROW_R, false, '#c9b6ff', 2);
-      line(EYE_L, true, '#ece8f2', 2); line(EYE_R, true, '#ece8f2', 2);
-      line(LIPS, true, o.faceScary > 0.6 ? '#ff6b5e' : o.faceSmile > 0.5 ? '#7fd18b' : '#ffb35c', 2.5);
+      if (stage < 1) line(LIPS, true, o.faceScary > 0.6 ? '#ff6b5e' : o.faceSmile > 0.5 ? '#7fd18b' : '#ffb35c', 2.5);
       pg.shadowBlur = 0;
+      costume(P, lm, performance.now());
     } else { pg.fillStyle = '#ece8f2'; pg.font = 'italic 15px Georgia, serif'; pg.textAlign = 'center'; pg.fillText('…where did you go?', MX, MY); pg.textAlign = 'left'; }
     pg.restore();
     pg.drawImage(frame, 0, 0);
@@ -243,7 +354,8 @@
     const hv = H() && H().video;
     if (hv && hv.srcObject && hv.videoWidth && !document.body.classList.contains('cam')) afterCam();
     const busy = (window.HMAT_FINALE && window.HMAT_FINALE.active) || ($('card') && $('card').style.display === 'flex');
-    pip.classList.toggle('hide', !!busy);
+    pip.classList.toggle('hide', !!busy); pipX.classList.toggle('hide', !!busy);
+    if (window.HMAT_SFX && window.__lastLevel !== stage){ window.__lastLevel = stage; window.HMAT_SFX('level', stage); }
     mini.classList.toggle('hide', !!(window.HMAT_FINALE && window.HMAT_FINALE.active));
   }, 250);
 

@@ -115,6 +115,9 @@
   #pip{position:absolute;left:14px;bottom:10px;width:min(200px,24vw);height:auto;aspect-ratio:240/336;z-index:15;display:none;filter:drop-shadow(0 10px 24px #000c)}
   #pip.on{display:block}
   #pip.hide{display:none}
+  #pipX{position:absolute;left:14px;bottom:calc(10px + min(200px,24vw)*1.4 - 14px);z-index:16;width:22px;height:22px;border-radius:50%;border:1px solid #c9a866;background:#120d08e6;color:#e8d4a2;font:700 13px/1 system-ui;cursor:pointer;display:none;padding:0}
+  #pipX.on{display:block}#pipX:hover{background:#5b0a12}
+  body.film #pipX,#pipX.hide{display:none!important}
   #about{position:absolute;inset:0;z-index:45;display:none;align-items:center;justify-content:center;background:#05040acc;backdrop-filter:blur(4px);padding:16px}
   #about.on{display:flex}
   #about .box{position:relative;max-width:640px;max-height:90vh;overflow:auto;background:#14121b;border:1px solid #2a2436;border-radius:16px;padding:24px 26px;line-height:1.5}
