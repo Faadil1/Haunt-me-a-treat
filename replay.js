@@ -55,7 +55,7 @@
     // fantôme seul
     gg.fillStyle = '#05040a'; gg.fillRect(0, 0, W, Hh);
     if (rv && rv.videoWidth) cover(gg, rv, rv.videoWidth, rv.videoHeight, 0, 0, W, Hh, false);
-    label(gg, 'HAUNT ME A TREAT', 40, 60, 36); label(gg, 'my real face drives this ghost · made with @rive_app', 40, 96, 22, '#c9b6ff');
+    label(gg, 'HAUNT ME A TREAT', W - 40, Hh - 92, 30, '#ece8f2', 'right'); label(gg, 'my real face drives this ghost · made with @rive_app', W - 40, Hh - 62, 18, '#c9b6ff', 'right');
     scoreBar(gg);
     // écran partagé
     if (webcamOn()){
